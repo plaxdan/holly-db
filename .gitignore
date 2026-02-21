@@ -1,0 +1,7 @@
+/target
+.holly-db/
+models/
+*.db
+*.db-wal
+*.db-shm
+.env
