@@ -207,6 +207,12 @@ enum Commands {
         action: RunAction,
     },
 
+    /// Artifact operations
+    Artifact {
+        #[command(subcommand)]
+        action: ArtifactAction,
+    },
+
     /// Add or remove tags on a node
     Tag {
         id: String,
@@ -338,6 +344,36 @@ enum RunAction {
 
         #[arg(long)]
         summary: Option<String>,
+    },
+}
+
+#[derive(Subcommand)]
+enum ArtifactAction {
+    /// Link an artifact to a task (and optionally a run)
+    Link {
+        /// Task node ID (full UUID or 8-char prefix)
+        #[arg(long)]
+        task: String,
+
+        /// Artifact path or locator
+        #[arg(long)]
+        path: String,
+
+        /// Artifact title (defaults to filename component of path)
+        #[arg(long)]
+        title: Option<String>,
+
+        /// Optional run node ID to link as well
+        #[arg(long)]
+        run: Option<String>,
+
+        /// Optional notes
+        #[arg(long)]
+        notes: Option<String>,
+
+        /// Artifact type (default: evidence)
+        #[arg(long, default_value = "evidence")]
+        r#type: String,
     },
 }
 
@@ -577,6 +613,28 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 summary,
             } => {
                 commands::run::complete(&db, &id, status.as_deref(), summary.as_deref(), json)?;
+            }
+        },
+
+        Commands::Artifact { action } => match action {
+            ArtifactAction::Link {
+                task,
+                path,
+                title,
+                run,
+                notes,
+                r#type,
+            } => {
+                commands::artifact::link(
+                    &db,
+                    &task,
+                    &path,
+                    title.as_deref(),
+                    run.as_deref(),
+                    notes.as_deref(),
+                    &r#type,
+                    json,
+                )?;
             }
         },
 

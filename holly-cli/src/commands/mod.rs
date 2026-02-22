@@ -1,3 +1,4 @@
+pub mod artifact;
 pub mod audit;
 pub mod connect;
 pub mod context;
