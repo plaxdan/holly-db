@@ -15,4 +15,5 @@ pub mod remember;
 pub mod run;
 pub mod search;
 pub mod stats;
+pub mod tag;
 pub mod task;

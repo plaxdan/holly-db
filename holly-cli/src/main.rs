@@ -207,6 +207,18 @@ enum Commands {
         action: RunAction,
     },
 
+    /// Add or remove tags on a node
+    Tag {
+        id: String,
+
+        /// Tags to add (or remove with --remove)
+        tags: Vec<String>,
+
+        /// Remove the listed tags instead of adding them
+        #[arg(long)]
+        remove: bool,
+    },
+
     /// Import from a legacy Holly database
     Import {
         /// Path to legacy holly.db
@@ -477,6 +489,10 @@ fn run(cli: Cli) -> anyhow::Result<()> {
                 commands::run::complete(&db, &id, status.as_deref(), summary.as_deref(), json)?;
             }
         },
+
+        Commands::Tag { id, tags, remove } => {
+            commands::tag::run(&db, &id, tags, remove, json)?;
+        }
 
         Commands::Import { from } => {
             commands::import::run(&db, &from, json)?;
