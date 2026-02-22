@@ -55,7 +55,12 @@ jobs:
 
       - name: Compute checksum
         shell: bash
-        run: sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+        run: |
+          if command -v sha256sum &>/dev/null; then
+            sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
+          else
+            shasum -a 256 "$ARCHIVE" > "$ARCHIVE.sha256"
+          fi
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v2
