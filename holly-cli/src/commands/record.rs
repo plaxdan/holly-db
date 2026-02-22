@@ -1,4 +1,4 @@
-use holly_core::{HollyDb, CreateNodeInput};
+use holly_core::{CreateNodeInput, HollyDb};
 use serde_json::Value;
 
 #[allow(clippy::too_many_arguments)]

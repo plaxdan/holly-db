@@ -1,7 +1,7 @@
-use rusqlite::Connection;
-use std::path::{Path, PathBuf};
 use crate::error::Result;
 use crate::schema::init_schema;
+use rusqlite::Connection;
+use std::path::{Path, PathBuf};
 
 /// Primary database handle.
 pub struct HollyDb {
@@ -46,15 +46,20 @@ impl HollyDb {
             init_fn(conn.handle(), std::ptr::null_mut(), std::ptr::null());
         }
 
-        conn.execute_batch("
+        conn.execute_batch(
+            "
             PRAGMA journal_mode = WAL;
             PRAGMA foreign_keys = ON;
             PRAGMA busy_timeout = 5000;
-        ")?;
+        ",
+        )?;
 
         let vec_available = init_schema(&conn)?;
 
-        Ok(HollyDb { conn, vec_available })
+        Ok(HollyDb {
+            conn,
+            vec_available,
+        })
     }
 
     /// Resolve the database path using the standard discovery chain:
@@ -101,7 +106,8 @@ mod tests {
     fn test_open_in_memory() {
         let db = HollyDb::open_in_memory().unwrap();
         // Verify tables exist
-        let count: i64 = db.conn
+        let count: i64 = db
+            .conn
             .query_row(
                 "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='knowledge_nodes'",
                 [],
@@ -123,7 +129,8 @@ mod tests {
     #[test]
     fn test_wal_mode() {
         let db = HollyDb::open_in_memory().unwrap();
-        let mode: String = db.conn
+        let mode: String = db
+            .conn
             .query_row("PRAGMA journal_mode", [], |r| r.get(0))
             .unwrap();
         // In-memory dbs always return "memory" mode, WAL only works on file dbs

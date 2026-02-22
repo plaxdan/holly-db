@@ -41,7 +41,10 @@ pub fn run(
             .as_deref()
             .map(|r| format!(" ({})", r))
             .unwrap_or_default();
-        println!("  {} [{}] {}{}{}", n.node_type, id_short, n.title, status_str, repo_str);
+        println!(
+            "  {} [{}] {}{}{}",
+            n.node_type, id_short, n.title, status_str, repo_str
+        );
     }
     Ok(())
 }

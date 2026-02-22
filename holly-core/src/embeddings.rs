@@ -36,8 +36,8 @@ impl EmbeddingModel {
 
         let config_str = std::fs::read_to_string(&config_path)
             .map_err(|e| HollyError::Embedding(e.to_string()))?;
-        let config: BertConfig = serde_json::from_str(&config_str)
-            .map_err(|e| HollyError::Embedding(e.to_string()))?;
+        let config: BertConfig =
+            serde_json::from_str(&config_str).map_err(|e| HollyError::Embedding(e.to_string()))?;
 
         let device = Device::Cpu;
         let vb = unsafe {
@@ -45,8 +45,8 @@ impl EmbeddingModel {
                 .map_err(|e| HollyError::Embedding(e.to_string()))?
         };
 
-        let model = BertModel::load(vb, &config)
-            .map_err(|e| HollyError::Embedding(e.to_string()))?;
+        let model =
+            BertModel::load(vb, &config).map_err(|e| HollyError::Embedding(e.to_string()))?;
 
         Ok(EmbeddingModel { tokenizer, model })
     }
@@ -91,9 +91,7 @@ impl EmbeddingModel {
 
 /// Get or initialize the model (lazy — only loads on first call).
 fn get_model(model_dir: &std::path::Path) -> Result<&'static Mutex<EmbeddingModel>> {
-    MODEL.get_or_try_init(|| {
-        EmbeddingModel::load(model_dir).map(Mutex::new)
-    })
+    MODEL.get_or_try_init(|| EmbeddingModel::load(model_dir).map(Mutex::new))
 }
 
 /// Default model directory: ~/.holly-db/models/all-MiniLM-L6-v2/
@@ -124,12 +122,9 @@ pub fn download_model(model_dir: &std::path::Path) -> Result<()> {
     std::fs::create_dir_all(model_dir)?;
 
     // Use hf-hub to download tokenizer and model weights
-    let rt = tokio::runtime::Runtime::new()
-        .map_err(|e| HollyError::Embedding(e.to_string()))?;
+    let rt = tokio::runtime::Runtime::new().map_err(|e| HollyError::Embedding(e.to_string()))?;
 
-    rt.block_on(async {
-        download_model_async(model_dir).await
-    })
+    rt.block_on(async { download_model_async(model_dir).await })
 }
 
 async fn download_model_async(model_dir: &std::path::Path) -> Result<()> {

@@ -90,7 +90,8 @@ impl HollyDb {
     pub fn list_events(&self, filter: ListEventsFilter) -> Result<Vec<HollyEvent>> {
         let mut sql = "SELECT id, event_type, payload, repo, workspace, agent, user, llm,
                               idempotency_key, created_at
-                       FROM holly_events WHERE 1=1".to_string();
+                       FROM holly_events WHERE 1=1"
+            .to_string();
         let mut positional: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         let mut idx = 1usize;
 
@@ -128,7 +129,8 @@ impl HollyDb {
 
 fn row_to_event(row: &rusqlite::Row<'_>) -> rusqlite::Result<HollyEvent> {
     let payload_str: String = row.get(2)?;
-    let payload: Value = serde_json::from_str(&payload_str).unwrap_or(Value::Object(Default::default()));
+    let payload: Value =
+        serde_json::from_str(&payload_str).unwrap_or(Value::Object(Default::default()));
 
     Ok(HollyEvent {
         id: row.get(0)?,
@@ -207,8 +209,15 @@ mod tests {
     #[test]
     fn test_list_events_filter() {
         let db = test_db();
-        db.record_event("session_start", serde_json::json!({}), None, None, None, None)
-            .unwrap();
+        db.record_event(
+            "session_start",
+            serde_json::json!({}),
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
         db.record_event("git_commit", serde_json::json!({}), None, None, None, None)
             .unwrap();
 

@@ -1,4 +1,4 @@
-use holly_core::{HollyDb, embeddings};
+use holly_core::{embeddings, HollyDb};
 
 pub fn run(db: &HollyDb, json: bool) -> anyhow::Result<()> {
     let model_dir = embeddings::default_model_dir();

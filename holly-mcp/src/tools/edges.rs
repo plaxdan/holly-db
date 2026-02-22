@@ -14,7 +14,9 @@ fn err(text: impl Into<String>) -> CallToolResult {
 }
 
 fn get_str(args: &Map<String, Value>, key: &str) -> Option<String> {
-    args.get(key).and_then(|v| v.as_str()).map(|s| s.to_string())
+    args.get(key)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
 }
 
 /// holly_connect — create an edge between two nodes.

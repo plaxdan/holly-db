@@ -1,6 +1,6 @@
 use crate::db::HollyDb;
 use crate::error::{HollyError, Result};
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -55,10 +55,9 @@ impl HollyDb {
             match self.import_legacy_edge(edge) {
                 Ok(_) => stats.edges_imported += 1,
                 Err(e) => {
-                    stats.errors.push(format!(
-                        "Edge {}->{}: {}",
-                        edge.from_node, edge.to_node, e
-                    ));
+                    stats
+                        .errors
+                        .push(format!("Edge {}->{}: {}", edge.from_node, edge.to_node, e));
                 }
             }
         }
@@ -81,14 +80,22 @@ impl HollyDb {
 
     fn import_legacy_node(&self, n: &LegacyNode) -> Result<()> {
         // Extract status from content
-        let status = n.content.get("status").and_then(|v| v.as_str()).map(|s| s.to_string());
+        let status = n
+            .content
+            .get("status")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
 
         // Extract provenance from metadata
-        let agent = n.metadata.get("created_by_agent")
+        let agent = n
+            .metadata
+            .get("created_by_agent")
             .and_then(|v| v.as_str())
             .filter(|s| !s.starts_with("unknown"))
             .map(|s| s.to_string());
-        let llm = n.metadata.get("created_by_llm")
+        let llm = n
+            .metadata
+            .get("created_by_llm")
             .and_then(|v| v.as_str())
             .filter(|s| !s.starts_with("unknown"))
             .map(|s| s.to_string());
@@ -97,8 +104,8 @@ impl HollyDb {
         let content_json = serde_json::to_string(&n.content)?;
 
         // Apply status governance (normalize mode — don't fail on invalid)
-        let normalized_status = crate::types::apply_status_governance(
-            &n.node_type, status.as_deref(), false)?;
+        let normalized_status =
+            crate::types::apply_status_governance(&n.node_type, status.as_deref(), false)?;
 
         // Insert directly to preserve timestamps
         self.conn.execute(
@@ -126,11 +133,15 @@ impl HollyDb {
     }
 
     fn import_legacy_edge(&self, e: &LegacyEdge) -> Result<()> {
-        let agent = e.properties.get("created_by_agent")
+        let agent = e
+            .properties
+            .get("created_by_agent")
             .and_then(|v| v.as_str())
             .filter(|s| !s.starts_with("unknown"))
             .map(|s| s.to_string());
-        let llm = e.properties.get("created_by_llm")
+        let llm = e
+            .properties
+            .get("created_by_llm")
             .and_then(|v| v.as_str())
             .filter(|s| !s.starts_with("unknown"))
             .map(|s| s.to_string());
@@ -154,15 +165,21 @@ impl HollyDb {
 
     fn import_legacy_event(&self, e: &LegacyEvent) -> Result<()> {
         let new_id = Uuid::new_v4().to_string();
-        let agent = e.payload.get("created_by_agent")
+        let agent = e
+            .payload
+            .get("created_by_agent")
             .and_then(|v| v.as_str())
             .filter(|s| !s.starts_with("unknown"))
             .map(|s| s.to_string());
-        let llm = e.payload.get("created_by_llm")
+        let llm = e
+            .payload
+            .get("created_by_llm")
             .and_then(|v| v.as_str())
             .filter(|s| !s.starts_with("unknown"))
             .map(|s| s.to_string());
-        let idempotency_key = e.payload.get("idempotency_key")
+        let idempotency_key = e
+            .payload
+            .get("idempotency_key")
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
@@ -249,7 +266,8 @@ fn load_legacy_nodes(conn: &Connection) -> rusqlite::Result<Vec<LegacyNode>> {
 
 fn load_legacy_edges(conn: &Connection) -> rusqlite::Result<Vec<LegacyEdge>> {
     // Handle both old (from_node/to_node) and new (from_id/to_id) column names
-    let has_from_node = conn.prepare("PRAGMA table_info(knowledge_edges)")?
+    let has_from_node = conn
+        .prepare("PRAGMA table_info(knowledge_edges)")?
         .query_map([], |row| {
             let name: String = row.get(1)?;
             Ok(name)
@@ -287,7 +305,8 @@ fn load_legacy_edges(conn: &Connection) -> rusqlite::Result<Vec<LegacyEdge>> {
 
 fn load_legacy_events(conn: &Connection) -> rusqlite::Result<Vec<LegacyEvent>> {
     // Check for repo column
-    let has_repo = conn.prepare("PRAGMA table_info(holly_events)")?
+    let has_repo = conn
+        .prepare("PRAGMA table_info(holly_events)")?
         .query_map([], |row| {
             let name: String = row.get(1)?;
             Ok(name)

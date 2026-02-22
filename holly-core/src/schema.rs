@@ -1,5 +1,5 @@
-use rusqlite::Connection;
 use crate::error::Result;
+use rusqlite::Connection;
 
 pub const SCHEMA_VERSION: i64 = 1;
 pub const EMBEDDING_DIM: usize = 384;

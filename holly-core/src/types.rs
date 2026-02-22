@@ -171,13 +171,7 @@ pub fn status_allowlist(node_type: &str) -> Option<&'static [&'static str]> {
             "completed",
             "cancelled",
         ]),
-        "run" => Some(&[
-            "started",
-            "in_progress",
-            "completed",
-            "failed",
-            "aborted",
-        ]),
+        "run" => Some(&["started", "in_progress", "completed", "failed", "aborted"]),
         "artifact" => Some(&["recorded", "verified", "deprecated"]),
         "memory" => None,
         _ => None,
@@ -206,14 +200,23 @@ pub fn valid_transitions(node_type: &str) -> HashMap<&'static str, &'static [&'s
     let mut map = HashMap::new();
     match node_type {
         "task" => {
-            map.insert("planned", ["in_progress", "blocked", "cancelled"].as_slice());
-            map.insert("in_progress", ["completed", "blocked", "cancelled"].as_slice());
+            map.insert(
+                "planned",
+                ["in_progress", "blocked", "cancelled"].as_slice(),
+            );
+            map.insert(
+                "in_progress",
+                ["completed", "blocked", "cancelled"].as_slice(),
+            );
             map.insert("blocked", ["in_progress", "cancelled"].as_slice());
             map.insert("completed", [].as_slice());
             map.insert("cancelled", [].as_slice());
         }
         "run" => {
-            map.insert("started", ["in_progress", "completed", "failed", "aborted"].as_slice());
+            map.insert(
+                "started",
+                ["in_progress", "completed", "failed", "aborted"].as_slice(),
+            );
             map.insert("in_progress", ["completed", "failed", "aborted"].as_slice());
             map.insert("completed", [].as_slice());
             map.insert("failed", [].as_slice());
@@ -261,9 +264,18 @@ pub fn normalize_status(node_type: &str, raw: &str) -> Option<String> {
             ("implemented", "active"),
             ("resolved", "active"),
         ],
-        "implementation" => &[("in progress", "in_progress"), ("in_progress", "in_progress")],
-        "task" => &[("in progress", "in_progress"), ("in_progress", "in_progress")],
-        "run" => &[("in progress", "in_progress"), ("in_progress", "in_progress")],
+        "implementation" => &[
+            ("in progress", "in_progress"),
+            ("in_progress", "in_progress"),
+        ],
+        "task" => &[
+            ("in progress", "in_progress"),
+            ("in_progress", "in_progress"),
+        ],
+        "run" => &[
+            ("in progress", "in_progress"),
+            ("in_progress", "in_progress"),
+        ],
         _ => &[],
     };
 

@@ -6,17 +6,44 @@ fn display_fields(node_type: &str) -> &'static [&'static str] {
         "idea" => &["status", "source_channel", "raw_text"],
         "goal" => &["priority", "complexity", "status"],
         "requirement" => &["acceptance_criteria", "estimated_complexity"],
-        "decision" => &["context", "decision", "consequences", "status", "alternatives_considered"],
+        "decision" => &[
+            "context",
+            "decision",
+            "consequences",
+            "status",
+            "alternatives_considered",
+        ],
         "implementation" => &["files", "commits", "status", "test_coverage"],
         "error" => &["stack_trace", "frequency", "severity", "status"],
         "improvement" => &["rationale", "impact", "effort", "status"],
-        "constraint" => &["applies_to", "value", "source_file", "verified_date", "status"],
+        "constraint" => &[
+            "applies_to",
+            "value",
+            "source_file",
+            "verified_date",
+            "status",
+        ],
         "task" => &["status", "priority", "owner", "depends_on", "evidence"],
         "run" => &["status", "task_id", "result", "artifacts"],
         "artifact" => &["status", "artifact_type", "path", "task_id", "run_id"],
-        "defect" => &["status", "severity", "category", "found_by", "origin_task_id", "origin_pr"],
+        "defect" => &[
+            "status",
+            "severity",
+            "category",
+            "found_by",
+            "origin_task_id",
+            "origin_pr",
+        ],
         "override" => &["status", "gate", "reason", "authority", "scope", "outcome"],
-        "policy" => &["status", "scope", "enforcement_level", "pass_conditions", "fail_conditions", "recovery_path", "version"],
+        "policy" => &[
+            "status",
+            "scope",
+            "enforcement_level",
+            "pass_conditions",
+            "fail_conditions",
+            "recovery_path",
+            "version",
+        ],
         _ => &[],
     }
 }
@@ -89,11 +116,17 @@ pub fn format_node_detail(node: &Node, edges_from: &[Edge], edges_to: &[Edge]) -
 
     for edge in edges_from {
         let to_title = edge.to_id.chars().take(8).collect::<String>();
-        lines.push(format!("Outgoing: --{}--> {} ({})", edge.edge_type, to_title, edge.to_id));
+        lines.push(format!(
+            "Outgoing: --{}--> {} ({})",
+            edge.edge_type, to_title, edge.to_id
+        ));
     }
     for edge in edges_to {
         let from_title = edge.from_id.chars().take(8).collect::<String>();
-        lines.push(format!("Incoming: <--{}-- {} ({})", edge.edge_type, from_title, edge.from_id));
+        lines.push(format!(
+            "Incoming: <--{}-- {} ({})",
+            edge.edge_type, from_title, edge.from_id
+        ));
     }
 
     lines.join("\n")
@@ -115,8 +148,16 @@ pub fn format_node_list(nodes: &[Node]) -> String {
                 n.node_type,
                 n.title,
                 &n.id[..8.min(n.id.len())],
-                if !status.is_empty() { format!(" status={}", status) } else { String::new() },
-                if !repo.is_empty() { format!(" repo={}", repo) } else { String::new() },
+                if !status.is_empty() {
+                    format!(" status={}", status)
+                } else {
+                    String::new()
+                },
+                if !repo.is_empty() {
+                    format!(" repo={}", repo)
+                } else {
+                    String::new()
+                },
             )
         })
         .collect();
@@ -132,7 +173,11 @@ pub fn format_node_summary(node: &Node) -> String {
         node.node_type,
         node.title,
         &node.id[..8.min(node.id.len())],
-        if !status.is_empty() { format!(" status={}", status) } else { String::new() },
+        if !status.is_empty() {
+            format!(" status={}", status)
+        } else {
+            String::new()
+        },
     )
 }
 
@@ -177,9 +222,17 @@ pub fn format_recent_table(nodes: &[Node]) -> String {
 
     for node in nodes {
         // Extract date from ISO8601 (chars 0..10)
-        let date = if node.updated_at.len() >= 10 { &node.updated_at[..10] } else { &node.updated_at };
+        let date = if node.updated_at.len() >= 10 {
+            &node.updated_at[..10]
+        } else {
+            &node.updated_at
+        };
         // Extract time HH:MM from chars 11..16
-        let time = if node.updated_at.len() >= 16 { &node.updated_at[11..16] } else { "" };
+        let time = if node.updated_at.len() >= 16 {
+            &node.updated_at[11..16]
+        } else {
+            ""
+        };
 
         if date != current_date {
             current_date = date.to_string();
@@ -202,9 +255,11 @@ pub fn format_recent_table(nodes: &[Node]) -> String {
 pub fn format_edge(edge: &Edge, from_title: &str, to_title: &str) -> String {
     format!(
         "{} ({}) --{}--> {} ({})",
-        from_title, &edge.from_id[..8.min(edge.from_id.len())],
+        from_title,
+        &edge.from_id[..8.min(edge.from_id.len())],
         edge.edge_type,
-        to_title, &edge.to_id[..8.min(edge.to_id.len())]
+        to_title,
+        &edge.to_id[..8.min(edge.to_id.len())]
     )
 }
 
@@ -222,8 +277,12 @@ pub fn format_event_list(events: &[HollyEvent]) -> String {
                 format_timestamp(&e.created_at),
                 e.event_type,
                 &e.id[..8.min(e.id.len())],
-                e.repo.as_ref().map_or(String::new(), |r| format!(" repo={}", r)),
-                e.workspace.as_ref().map_or(String::new(), |w| format!(" workspace={}", w)),
+                e.repo
+                    .as_ref()
+                    .map_or(String::new(), |r| format!(" repo={}", r)),
+                e.workspace
+                    .as_ref()
+                    .map_or(String::new(), |w| format!(" workspace={}", w)),
             )
         })
         .collect();
@@ -340,7 +399,10 @@ mod tests {
     #[test]
     fn test_format_search_results_score() {
         let node = make_node("abc123def456", "decision", "Test");
-        let results = vec![SearchResult { node, score: 0.123456 }];
+        let results = vec![SearchResult {
+            node,
+            score: 0.123456,
+        }];
         let s = format_search_results(&results);
         assert!(s.contains("score=0.123"));
         assert!(!s.contains("score=0.1234")); // only 3 decimal places

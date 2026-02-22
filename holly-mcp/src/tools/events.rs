@@ -15,7 +15,9 @@ fn err(text: impl Into<String>) -> CallToolResult {
 }
 
 fn get_str(args: &Map<String, Value>, key: &str) -> Option<String> {
-    args.get(key).and_then(|v| v.as_str()).map(|s| s.to_string())
+    args.get(key)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
 }
 
 fn get_u32(args: &Map<String, Value>, key: &str) -> Option<u32> {
@@ -39,7 +41,14 @@ pub async fn holly_event_record(db: Db, args: Map<String, Value>) -> CallToolRes
 
     tokio::task::spawn_blocking(move || {
         let db = db.lock().unwrap();
-        match db.record_event(&event_type, payload, repo.as_deref(), workspace.as_deref(), None, None) {
+        match db.record_event(
+            &event_type,
+            payload,
+            repo.as_deref(),
+            workspace.as_deref(),
+            None,
+            None,
+        ) {
             Ok(event) => ok(format!(
                 "Recorded event #{}: {}",
                 &event.id[..8.min(event.id.len())],

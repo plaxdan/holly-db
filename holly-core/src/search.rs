@@ -266,13 +266,16 @@ impl HollyDb {
     ) -> Result<Vec<SearchResult>> {
         let limit = opts.limit.unwrap_or(20);
 
-        let fts_results = self.fts_search(query, SearchOptions {
-            node_type: opts.node_type.clone(),
-            repo: opts.repo.clone(),
-            status: opts.status.clone(),
-            source: opts.source.clone(),
-            limit: Some(limit * 2),
-        })?;
+        let fts_results = self.fts_search(
+            query,
+            SearchOptions {
+                node_type: opts.node_type.clone(),
+                repo: opts.repo.clone(),
+                status: opts.status.clone(),
+                source: opts.source.clone(),
+                limit: Some(limit * 2),
+            },
+        )?;
 
         let vec_results = if let Some(emb) = embedding {
             self.vec_search(emb, limit * 2, None)?
@@ -311,23 +314,35 @@ impl HollyDb {
             }
         }
 
-        merged.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        merged.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         merged.truncate(limit as usize);
         Ok(merged)
     }
 
     /// Find nodes semantically similar to a given node, with optional type filter.
-    pub fn find_similar(&self, node_id: &str, limit: u32, node_type: Option<&str>) -> Result<Vec<SearchResult>> {
+    pub fn find_similar(
+        &self,
+        node_id: &str,
+        limit: u32,
+        node_type: Option<&str>,
+    ) -> Result<Vec<SearchResult>> {
         if !self.vec_available {
             return Ok(Vec::new());
         }
 
         // Get the stored embedding
-        let bytes: Option<Vec<u8>> = self.conn.query_row(
-            "SELECT embedding FROM knowledge_vec WHERE id=?1",
-            params![node_id],
-            |row| row.get(0),
-        ).ok();
+        let bytes: Option<Vec<u8>> = self
+            .conn
+            .query_row(
+                "SELECT embedding FROM knowledge_vec WHERE id=?1",
+                params![node_id],
+                |row| row.get(0),
+            )
+            .ok();
 
         let Some(bytes) = bytes else {
             return Ok(Vec::new());
@@ -335,11 +350,19 @@ impl HollyDb {
 
         let embedding = bytes_to_floats(&bytes);
         // Fetch extra results so we can filter by type
-        let fetch_limit = if node_type.is_some() { limit * 3 } else { limit };
+        let fetch_limit = if node_type.is_some() {
+            limit * 3
+        } else {
+            limit
+        };
         let results = self.vec_search(&embedding, fetch_limit, Some(node_id))?;
 
         if let Some(nt) = node_type {
-            Ok(results.into_iter().filter(|r| r.node.node_type == nt).take(limit as usize).collect())
+            Ok(results
+                .into_iter()
+                .filter(|r| r.node.node_type == nt)
+                .take(limit as usize)
+                .collect())
         } else {
             Ok(results.into_iter().take(limit as usize).collect())
         }
@@ -388,9 +411,7 @@ mod tests {
         let db = test_db();
         seed(&db);
 
-        let results = db
-            .fts_search("SQLite", SearchOptions::default())
-            .unwrap();
+        let results = db.fts_search("SQLite", SearchOptions::default()).unwrap();
         assert!(!results.is_empty());
         assert!(results[0].node.title.contains("SQLite"));
     }
@@ -432,9 +453,7 @@ mod tests {
         seed(&db);
 
         // Query that FTS won't match (very short or unusual)
-        let results = db
-            .fts_search("dark", SearchOptions::default())
-            .unwrap();
+        let results = db.fts_search("dark", SearchOptions::default()).unwrap();
         assert!(!results.is_empty());
     }
 

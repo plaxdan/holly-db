@@ -23,16 +23,25 @@ pub struct DailyActivity {
 
 impl HollyDb {
     pub fn stats(&self, days: u32) -> Result<Stats> {
-        let total_nodes: usize = self.conn.query_row(
-            "SELECT count(*) FROM knowledge_nodes", [], |r| r.get::<_, i64>(0))
+        let total_nodes: usize = self
+            .conn
+            .query_row("SELECT count(*) FROM knowledge_nodes", [], |r| {
+                r.get::<_, i64>(0)
+            })
             .map(|c| c as usize)?;
 
-        let total_edges: usize = self.conn.query_row(
-            "SELECT count(*) FROM knowledge_edges", [], |r| r.get::<_, i64>(0))
+        let total_edges: usize = self
+            .conn
+            .query_row("SELECT count(*) FROM knowledge_edges", [], |r| {
+                r.get::<_, i64>(0)
+            })
             .map(|c| c as usize)?;
 
-        let total_events: usize = self.conn.query_row(
-            "SELECT count(*) FROM holly_events", [], |r| r.get::<_, i64>(0))
+        let total_events: usize = self
+            .conn
+            .query_row("SELECT count(*) FROM holly_events", [], |r| {
+                r.get::<_, i64>(0)
+            })
             .map(|c| c as usize)?;
 
         // By type
@@ -66,7 +75,8 @@ impl HollyDb {
     fn count_by(&self, table: &str, column: &str) -> Result<HashMap<String, usize>> {
         let sql = format!(
             "SELECT {col}, count(*) FROM {tbl} GROUP BY {col}",
-            col = column, tbl = table
+            col = column,
+            tbl = table
         );
         let mut stmt = self.conn.prepare(&sql)?;
         let map = stmt
@@ -82,7 +92,8 @@ impl HollyDb {
     fn count_by_nullable(&self, table: &str, column: &str) -> Result<HashMap<String, usize>> {
         let sql = format!(
             "SELECT COALESCE({col}, 'none'), count(*) FROM {tbl} GROUP BY {col}",
-            col = column, tbl = table
+            col = column,
+            tbl = table
         );
         let mut stmt = self.conn.prepare(&sql)?;
         let map = stmt

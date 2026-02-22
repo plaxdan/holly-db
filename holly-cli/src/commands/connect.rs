@@ -1,12 +1,6 @@
 use holly_core::HollyDb;
 
-pub fn run(
-    db: &HollyDb,
-    from: &str,
-    to: &str,
-    edge_type: &str,
-    json: bool,
-) -> anyhow::Result<()> {
+pub fn run(db: &HollyDb, from: &str, to: &str, edge_type: &str, json: bool) -> anyhow::Result<()> {
     let edge = db.create_edge(from, to, edge_type, None)?;
 
     if json {

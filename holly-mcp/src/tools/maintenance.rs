@@ -15,7 +15,9 @@ fn err(text: impl Into<String>) -> CallToolResult {
 }
 
 fn get_str(args: &Map<String, Value>, key: &str) -> Option<String> {
-    args.get(key).and_then(|v| v.as_str()).map(|s| s.to_string())
+    args.get(key)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
 }
 
 fn get_u32(args: &Map<String, Value>, key: &str) -> Option<u32> {
@@ -29,8 +31,14 @@ pub async fn holly_audit(db: Db, args: Map<String, Value>) -> CallToolResult {
     let stale_days = get_u32(&args, "stale_days").unwrap_or(14);
     let mode = get_str(&args, "mode").unwrap_or_else(|| "summary".to_string());
     // Accept these params for API compatibility, but they're not yet implemented
-    let _similarity_threshold = args.get("similarity_threshold").and_then(|v| v.as_f64()).unwrap_or(0.85);
-    let _duplicate_threshold = args.get("duplicate_threshold").and_then(|v| v.as_f64()).unwrap_or(0.92);
+    let _similarity_threshold = args
+        .get("similarity_threshold")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.85);
+    let _duplicate_threshold = args
+        .get("duplicate_threshold")
+        .and_then(|v| v.as_f64())
+        .unwrap_or(0.92);
 
     tokio::task::spawn_blocking(move || {
         let db = db.lock().unwrap();

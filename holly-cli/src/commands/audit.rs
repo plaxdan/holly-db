@@ -54,7 +54,10 @@ pub fn run(db: &HollyDb, fix: bool, stale_days: u32, json: bool) -> anyhow::Resu
 
     let fixable = report.orphaned_edges + report.missing_embeddings;
     if !fix && fixable > 0 {
-        println!("\n{} issue(s) can be auto-fixed. Run `holly audit --fix` to apply.", fixable);
+        println!(
+            "\n{} issue(s) can be auto-fixed. Run `holly audit --fix` to apply.",
+            fixable
+        );
     }
 
     Ok(())

@@ -1,6 +1,4 @@
-use holly_core::{
-    CreateNodeInput, HollyDb, ListNodesFilter, Provenance, UpdateNodeInput,
-};
+use holly_core::{CreateNodeInput, HollyDb, ListNodesFilter, Provenance, UpdateNodeInput};
 use rmcp::model::{CallToolResult, Content};
 use serde_json::{Map, Value};
 use std::sync::{Arc, Mutex};
@@ -16,7 +14,9 @@ fn err(text: impl Into<String>) -> CallToolResult {
 }
 
 fn get_str(args: &Map<String, Value>, key: &str) -> Option<String> {
-    args.get(key).and_then(|v| v.as_str()).map(|s| s.to_string())
+    args.get(key)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
 }
 
 fn get_str_req(args: &Map<String, Value>, key: &str) -> Result<String, String> {
@@ -30,7 +30,11 @@ fn get_u32(args: &Map<String, Value>, key: &str) -> Option<u32> {
 fn get_str_vec(args: &Map<String, Value>, key: &str) -> Vec<String> {
     args.get(key)
         .and_then(|v| v.as_array())
-        .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -108,7 +112,10 @@ pub async fn holly_task_transition(db: Db, args: Map<String, Value>) -> CallTool
             Err(e) => return err(format!("Error: {}", e)),
         };
 
-        let old_status = existing.status.clone().unwrap_or_else(|| "unknown".to_string());
+        let old_status = existing
+            .status
+            .clone()
+            .unwrap_or_else(|| "unknown".to_string());
 
         let input = UpdateNodeInput {
             status: Some(new_status.clone()),
@@ -117,7 +124,10 @@ pub async fn holly_task_transition(db: Db, args: Map<String, Value>) -> CallTool
         };
 
         match db.update_node(&id, input) {
-            Ok(_) => ok(format!("Task {} transitioned {} -> {}.", id, old_status, new_status)),
+            Ok(_) => ok(format!(
+                "Task {} transitioned {} -> {}.",
+                id, old_status, new_status
+            )),
             Err(e) => err(format!("Error: {}", e)),
         }
     })
@@ -156,11 +166,18 @@ pub async fn holly_task_list(db: Db, args: Map<String, Value>) -> CallToolResult
                             n.title,
                             &n.id[..8.min(n.id.len())],
                             n.status.as_deref().unwrap_or("none"),
-                            n.content.get("priority").and_then(|v| v.as_str()).unwrap_or("medium"),
+                            n.content
+                                .get("priority")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("medium"),
                         )
                     })
                     .collect();
-                ok(format!("Found {} task(s):\n\n{}", lines.len(), lines.join("\n")))
+                ok(format!(
+                    "Found {} task(s):\n\n{}",
+                    lines.len(),
+                    lines.join("\n")
+                ))
             }
             Err(e) => err(format!("Error: {}", e)),
         }
@@ -214,10 +231,13 @@ pub async fn holly_run_start(db: Db, args: Map<String, Value>) -> CallToolResult
                 // Try to transition task to in_progress if still planned
                 if let Ok(task) = db.get_node(&task_id) {
                     if task.status.as_deref() == Some("planned") {
-                        let _ = db.update_node(&task_id, UpdateNodeInput {
-                            status: Some("in_progress".to_string()),
-                            ..Default::default()
-                        });
+                        let _ = db.update_node(
+                            &task_id,
+                            UpdateNodeInput {
+                                status: Some("in_progress".to_string()),
+                                ..Default::default()
+                            },
+                        );
                     }
                 }
 
@@ -258,7 +278,10 @@ pub async fn holly_run_complete(db: Db, args: Map<String, Value>) -> CallToolRes
             extra.insert("result".to_string(), Value::String(summary));
         }
         if !artifacts.is_empty() {
-            extra.insert("artifacts".to_string(), Value::Array(artifacts.into_iter().map(Value::String).collect()));
+            extra.insert(
+                "artifacts".to_string(),
+                Value::Array(artifacts.into_iter().map(Value::String).collect()),
+            );
         }
 
         let input = UpdateNodeInput {

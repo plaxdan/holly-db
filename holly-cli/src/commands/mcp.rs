@@ -11,10 +11,8 @@ pub fn run_server() -> anyhow::Result<()> {
 pub fn enable(db_path: &Path) -> anyhow::Result<()> {
     let mcp_path = mcp_json_path();
     let mut mcp: Value = if mcp_path.exists() {
-        let content = std::fs::read_to_string(&mcp_path)
-            .context("Failed to read .mcp.json")?;
-        serde_json::from_str(&content)
-            .context("Failed to parse .mcp.json — is it valid JSON?")?
+        let content = std::fs::read_to_string(&mcp_path).context("Failed to read .mcp.json")?;
+        serde_json::from_str(&content).context("Failed to parse .mcp.json — is it valid JSON?")?
     } else {
         json!({ "mcpServers": {} })
     };
@@ -79,7 +77,10 @@ pub fn disable() -> anyhow::Result<()> {
         println!("holly-db removed from {}", mcp_path.display());
         println!("Restart your MCP client to pick up the change.");
     } else {
-        println!("holly-db was not found in {} — nothing to remove.", mcp_path.display());
+        println!(
+            "holly-db was not found in {} — nothing to remove.",
+            mcp_path.display()
+        );
     }
 
     Ok(())
@@ -94,8 +95,7 @@ pub fn status() -> anyhow::Result<()> {
 
     // Check .mcp.json
     let (mcp_found, holly_entry) = if mcp_path.exists() {
-        let content = std::fs::read_to_string(&mcp_path)
-            .context("Failed to read .mcp.json")?;
+        let content = std::fs::read_to_string(&mcp_path).context("Failed to read .mcp.json")?;
         match serde_json::from_str::<Value>(&content) {
             Ok(mcp) => {
                 let entry = mcp
