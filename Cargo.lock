@@ -1105,7 +1105,7 @@ dependencies = [
 
 [[package]]
 name = "holly"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "clap",
@@ -1119,7 +1119,7 @@ dependencies = [
 
 [[package]]
 name = "holly-core"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "candle-core",
  "candle-nn",
@@ -1144,7 +1144,7 @@ dependencies = [
 
 [[package]]
 name = "holly-mcp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "holly-core",
