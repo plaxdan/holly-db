@@ -22,7 +22,7 @@ pub struct DailyActivity {
 }
 
 impl HollyDb {
-    pub fn stats(&self) -> Result<Stats> {
+    pub fn stats(&self, days: u32) -> Result<Stats> {
         let total_nodes: usize = self.conn.query_row(
             "SELECT count(*) FROM knowledge_nodes", [], |r| r.get::<_, i64>(0))
             .map(|c| c as usize)?;
@@ -44,8 +44,9 @@ impl HollyDb {
         // By status
         let by_status = self.count_by_nullable("knowledge_nodes", "status")?;
 
-        // Daily activity (last 30 days)
-        let daily_activity = self.daily_activity(30)?;
+        // Daily activity (parameterized; 0 = all time ~10 years)
+        let window = if days == 0 { 3650 } else { days };
+        let daily_activity = self.daily_activity(window)?;
 
         // Edge type counts
         let edge_type_counts = self.count_by("knowledge_edges", "edge_type")?;
@@ -122,7 +123,7 @@ mod tests {
     #[test]
     fn test_stats_empty() {
         let db = HollyDb::open_in_memory().unwrap();
-        let stats = db.stats().unwrap();
+        let stats = db.stats(30).unwrap();
         assert_eq!(stats.total_nodes, 0);
         assert_eq!(stats.total_edges, 0);
         assert_eq!(stats.total_events, 0);
@@ -150,7 +151,7 @@ mod tests {
         })
         .unwrap();
 
-        let stats = db.stats().unwrap();
+        let stats = db.stats(30).unwrap();
         assert_eq!(stats.total_nodes, 3);
         assert_eq!(*stats.by_type.get("decision").unwrap(), 2);
         assert_eq!(*stats.by_type.get("constraint").unwrap(), 1);

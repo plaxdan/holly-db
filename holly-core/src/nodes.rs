@@ -7,6 +7,14 @@ use rusqlite::params;
 use serde_json::Value;
 use uuid::Uuid;
 
+/// Statistics from a reindex run.
+#[derive(Debug, Default, serde::Serialize)]
+pub struct ReindexStats {
+    pub indexed: usize,
+    pub already_indexed: usize,
+    pub errors: Vec<String>,
+}
+
 /// A knowledge node.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Node {
@@ -47,6 +55,10 @@ pub struct ListNodesFilter {
     pub source: Option<String>,
     pub limit: Option<u32>,
     pub offset: Option<u32>,
+    /// Filter: updated_at >= datetime('now', '-N days')
+    pub since_days: Option<u32>,
+    /// If true, ORDER BY updated_at DESC instead of created_at DESC
+    pub sort_by_updated: bool,
 }
 
 /// Input for updating a node.
@@ -109,20 +121,29 @@ impl HollyDb {
     }
 
     pub fn get_node(&self, id: &str) -> Result<Node> {
-        self.conn
-            .query_row(
+        // Accept full UUID (36 chars) or the 8-char prefix shown in list/search output.
+        let result = if id.len() < 36 {
+            let pattern = format!("{}%", id);
+            self.conn.query_row(
+                "SELECT id, node_type, title, content, tags, repo, status, source,
+                        agent, user, llm, created_at, updated_at
+                 FROM knowledge_nodes WHERE id LIKE ?1 LIMIT 1",
+                params![pattern],
+                row_to_node,
+            )
+        } else {
+            self.conn.query_row(
                 "SELECT id, node_type, title, content, tags, repo, status, source,
                         agent, user, llm, created_at, updated_at
                  FROM knowledge_nodes WHERE id = ?1",
                 params![id],
                 row_to_node,
             )
-            .map_err(|e| match e {
-                rusqlite::Error::QueryReturnedNoRows => {
-                    HollyError::NodeNotFound(id.to_string())
-                }
-                other => HollyError::Database(other),
-            })
+        };
+        result.map_err(|e| match e {
+            rusqlite::Error::QueryReturnedNoRows => HollyError::NodeNotFound(id.to_string()),
+            other => HollyError::Database(other),
+        })
     }
 
     pub fn update_node(&self, id: &str, input: UpdateNodeInput) -> Result<Node> {
@@ -222,8 +243,17 @@ impl HollyDb {
             positional.push(Box::new(src.clone()));
             idx += 1;
         }
+        if let Some(days) = filter.since_days {
+            sql.push_str(&format!(" AND updated_at >= datetime('now', ?{idx})"));
+            positional.push(Box::new(format!("-{} days", days)));
+            idx += 1;
+        }
 
-        sql.push_str(" ORDER BY created_at DESC");
+        if filter.sort_by_updated {
+            sql.push_str(" ORDER BY updated_at DESC");
+        } else {
+            sql.push_str(" ORDER BY created_at DESC");
+        }
 
         let limit = filter.limit.unwrap_or(100);
         sql.push_str(&format!(" LIMIT ?{idx}"));
@@ -242,6 +272,59 @@ impl HollyDb {
             .query_map(refs.as_slice(), row_to_node)?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         Ok(nodes)
+    }
+
+    /// Backfill embeddings for all nodes not yet in the vector index.
+    /// Skips nodes if the embedding model is unavailable.
+    /// Returns counts of indexed, already-indexed, and errored nodes.
+    pub fn reindex(&self) -> Result<ReindexStats> {
+        if !self.vec_available {
+            return Ok(ReindexStats {
+                errors: vec!["sqlite-vec not available".into()],
+                ..Default::default()
+            });
+        }
+
+        // Count already-indexed nodes
+        let already_indexed: usize = self.conn.query_row(
+            "SELECT count(*) FROM knowledge_vec",
+            [],
+            |row| row.get::<_, i64>(0),
+        ).unwrap_or(0) as usize;
+
+        // Fetch nodes missing from knowledge_vec
+        let mut stmt = self.conn.prepare(
+            "SELECT id, title, content FROM knowledge_nodes
+             WHERE id NOT IN (SELECT id FROM knowledge_vec)",
+        )?;
+        let missing: Vec<(String, String, String)> = stmt
+            .query_map([], |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, String>(1)?,
+                    row.get::<_, String>(2)?,
+                ))
+            })?
+            .collect::<std::result::Result<Vec<_>, _>>()?;
+
+        let mut stats = ReindexStats {
+            already_indexed,
+            ..Default::default()
+        };
+
+        for (id, title, content_str) in missing {
+            let content: Value = serde_json::from_str(&content_str).unwrap_or_default();
+            let text = embedding_text(&title, &content);
+            match crate::embeddings::generate_embedding(&text) {
+                Ok(embedding) => match self.vec_upsert(&id, &embedding) {
+                    Ok(()) => stats.indexed += 1,
+                    Err(e) => stats.errors.push(format!("{}: upsert failed: {}", &id[..8], e)),
+                },
+                Err(e) => stats.errors.push(format!("{}: embed failed: {}", &id[..8], e)),
+            }
+        }
+
+        Ok(stats)
     }
 }
 
@@ -273,6 +356,24 @@ fn default_content(node_type: &str) -> Value {
         "run" => serde_json::json!({ "status": "started", "task_id": "", "result": "recorded", "artifacts": [] }),
         "artifact" => serde_json::json!({ "status": "recorded", "artifact_type": "evidence", "path": "", "task_id": "", "run_id": "" }),
         _ => serde_json::json!({}),
+    }
+}
+
+/// Build text for embedding: title + all non-empty string values from content.
+pub fn embedding_text(title: &str, content: &Value) -> String {
+    let content_str = if let Some(obj) = content.as_object() {
+        obj.values()
+            .filter_map(|v| v.as_str())
+            .filter(|s| !s.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ")
+    } else {
+        String::new()
+    };
+    if content_str.is_empty() {
+        title.to_string()
+    } else {
+        format!("{} {}", title, content_str)
     }
 }
 

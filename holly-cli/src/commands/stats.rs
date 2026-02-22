@@ -1,7 +1,7 @@
 use holly_core::HollyDb;
 
 pub fn run(db: &HollyDb, json: bool) -> anyhow::Result<()> {
-    let stats = db.stats()?;
+    let stats = db.stats(30)?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&stats)?);

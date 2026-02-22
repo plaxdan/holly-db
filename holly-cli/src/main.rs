@@ -213,6 +213,13 @@ enum Commands {
         #[arg(long)]
         from: PathBuf,
     },
+
+    /// Regenerate vector embeddings for nodes missing from the index
+    Reindex,
+
+    /// Run the MCP server (stdio transport)
+    #[command(name = "mcp-server")]
+    McpServer,
 }
 
 #[derive(Subcommand)]
@@ -316,6 +323,11 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             return commands::init::download_model();
         }
         return commands::init::run(*global, cli.db.as_deref());
+    }
+
+    // `mcp-server` opens its own DB inside the async runtime
+    if let Commands::McpServer = &cli.command {
+        return commands::mcp::run_server();
     }
 
     // All other commands require an open DB
@@ -443,6 +455,12 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         Commands::Import { from } => {
             commands::import::run(&db, &from, json)?;
         }
+
+        Commands::Reindex => {
+            commands::reindex::run(&db, json)?;
+        }
+
+        Commands::McpServer => unreachable!("handled above"),
     }
 
     Ok(())

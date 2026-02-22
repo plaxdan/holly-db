@@ -316,8 +316,8 @@ impl HollyDb {
         Ok(merged)
     }
 
-    /// Find nodes semantically similar to a given node.
-    pub fn find_similar(&self, node_id: &str, limit: u32) -> Result<Vec<SearchResult>> {
+    /// Find nodes semantically similar to a given node, with optional type filter.
+    pub fn find_similar(&self, node_id: &str, limit: u32, node_type: Option<&str>) -> Result<Vec<SearchResult>> {
         if !self.vec_available {
             return Ok(Vec::new());
         }
@@ -334,7 +334,15 @@ impl HollyDb {
         };
 
         let embedding = bytes_to_floats(&bytes);
-        self.vec_search(&embedding, limit, Some(node_id))
+        // Fetch extra results so we can filter by type
+        let fetch_limit = if node_type.is_some() { limit * 3 } else { limit };
+        let results = self.vec_search(&embedding, fetch_limit, Some(node_id))?;
+
+        if let Some(nt) = node_type {
+            Ok(results.into_iter().filter(|r| r.node.node_type == nt).take(limit as usize).collect())
+        } else {
+            Ok(results.into_iter().take(limit as usize).collect())
+        }
     }
 }
 

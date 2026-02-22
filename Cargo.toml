@@ -1,5 +1,5 @@
 [workspace]
-members = ["holly-core", "holly-cli"]
+members = ["holly-core", "holly-cli", "holly-mcp"]
 resolver = "2"
 
 [profile.release]

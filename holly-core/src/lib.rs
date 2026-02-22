@@ -17,7 +17,7 @@ pub mod types;
 // Convenience re-exports
 pub use db::HollyDb;
 pub use error::{HollyError, Result};
-pub use nodes::{CreateNodeInput, ListNodesFilter, Node, UpdateNodeInput};
+pub use nodes::{CreateNodeInput, ListNodesFilter, Node, ReindexStats, UpdateNodeInput, embedding_text};
 pub use edges::Edge;
 pub use events::{HollyEvent, ListEventsFilter};
 pub use search::{SearchOptions, SearchResult};

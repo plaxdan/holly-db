@@ -1,4 +1,6 @@
 pub mod audit;
+pub mod mcp;
+pub mod reindex;
 pub mod connect;
 pub mod context;
 pub mod delete;
