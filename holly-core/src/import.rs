@@ -70,7 +70,11 @@ impl HollyDb {
             match self.import_legacy_event(event) {
                 Ok(_) => stats.events_imported += 1,
                 Err(e) => {
-                    stats.errors.push(format!("Event {}: {}", event.id.as_deref().unwrap_or("?"), e));
+                    stats.errors.push(format!(
+                        "Event {}: {}",
+                        event.id.as_deref().unwrap_or("?"),
+                        e
+                    ));
                 }
             }
         }
@@ -409,7 +413,10 @@ mod tests {
         let nodes = load_legacy_nodes(&legacy).expect("load_legacy_nodes should succeed");
         assert_eq!(nodes.len(), 1);
         assert_eq!(
-            nodes[0].metadata.get("created_by_agent").and_then(|v| v.as_str()),
+            nodes[0]
+                .metadata
+                .get("created_by_agent")
+                .and_then(|v| v.as_str()),
             Some("claude-code")
         );
     }
@@ -467,7 +474,9 @@ mod tests {
         let target = HollyDb::open_in_memory().unwrap();
         let tmp = write_legacy_db_to_tempfile();
 
-        let stats = target.import_from(tmp.path()).expect("import_from should succeed");
+        let stats = target
+            .import_from(tmp.path())
+            .expect("import_from should succeed");
         assert_eq!(stats.nodes_imported, 1);
         assert_eq!(stats.errors.len(), 0);
 
