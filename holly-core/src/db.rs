@@ -28,11 +28,21 @@ impl HollyDb {
     }
 
     fn configure_and_init(conn: Connection) -> Result<Self> {
-        // Load sqlite-vec extension (statically linked)
+        // Register sqlite-vec for future connections AND initialize on this one.
+        // sqlite3_auto_extension only fires on connections opened after registration,
+        // so we call the init function directly on the already-open connection too.
         unsafe {
             rusqlite::ffi::sqlite3_auto_extension(Some(std::mem::transmute(
                 sqlite_vec::sqlite3_vec_init as *const (),
             )));
+            // Direct init on current connection (p_api = NULL: statically linked, no dispatch table needed)
+            type ExtInit = unsafe extern "C" fn(
+                *mut rusqlite::ffi::sqlite3,
+                *mut *mut std::ffi::c_char,
+                *const std::ffi::c_void,
+            ) -> std::ffi::c_int;
+            let init_fn: ExtInit = std::mem::transmute(sqlite_vec::sqlite3_vec_init as *const ());
+            init_fn(conn.handle(), std::ptr::null_mut(), std::ptr::null());
         }
 
         conn.execute_batch("

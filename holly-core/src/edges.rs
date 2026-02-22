@@ -24,9 +24,11 @@ impl HollyDb {
         edge_type: &str,
         provenance: Option<Provenance>,
     ) -> Result<Edge> {
-        // Validate both nodes exist
-        self.get_node(from_id)?;
-        self.get_node(to_id)?;
+        // Resolve full UUIDs (supports 8-char prefix lookup).
+        let from_node = self.get_node(from_id)?;
+        let to_node = self.get_node(to_id)?;
+        let from_full = from_node.id.clone();
+        let to_full = to_node.id.clone();
 
         let now = Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
         let prov = provenance.unwrap_or_else(Provenance::from_env);
@@ -35,10 +37,10 @@ impl HollyDb {
             "INSERT OR IGNORE INTO knowledge_edges
              (from_id, to_id, edge_type, agent, user, llm, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![from_id, to_id, edge_type, prov.agent, prov.user, prov.llm, now],
+            params![from_full, to_full, edge_type, prov.agent, prov.user, prov.llm, now],
         )?;
 
-        self.get_edge(from_id, to_id, edge_type)
+        self.get_edge(&from_full, &to_full, edge_type)
     }
 
     pub fn get_edge(&self, from_id: &str, to_id: &str, edge_type: &str) -> Result<Edge> {
