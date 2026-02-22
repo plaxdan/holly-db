@@ -219,6 +219,14 @@ enum Commands {
         remove: bool,
     },
 
+    /// Check for a newer version of holly
+    #[command(name = "update-check")]
+    UpdateCheck {
+        /// Print current version even if up to date
+        #[arg(long)]
+        verbose: bool,
+    },
+
     /// Import from a legacy Holly database
     Import {
         /// Path to legacy holly.db
@@ -355,6 +363,11 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             return commands::init::download_model();
         }
         return commands::init::run(*global, cli.db.as_deref());
+    }
+
+    // `update-check` — no DB needed
+    if let Commands::UpdateCheck { verbose } = &cli.command {
+        return commands::update_check::run(*verbose);
     }
 
     // `mcp-server` opens its own DB inside the async runtime
@@ -579,6 +592,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             commands::reindex::run(&db, json)?;
         }
 
+        Commands::UpdateCheck { .. } => unreachable!("handled above"),
         Commands::McpServer => unreachable!("handled above"),
         Commands::Mcp { .. } => unreachable!("handled above"),
     }

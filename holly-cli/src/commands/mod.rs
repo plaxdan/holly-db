@@ -17,3 +17,4 @@ pub mod search;
 pub mod stats;
 pub mod tag;
 pub mod task;
+pub mod update_check;
