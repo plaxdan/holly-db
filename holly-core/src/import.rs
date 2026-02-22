@@ -70,7 +70,7 @@ impl HollyDb {
             match self.import_legacy_event(event) {
                 Ok(_) => stats.events_imported += 1,
                 Err(e) => {
-                    stats.errors.push(format!("Event {}: {}", event.id, e));
+                    stats.errors.push(format!("Event {}: {}", event.id.as_deref().unwrap_or("?"), e));
                 }
             }
         }
@@ -229,7 +229,7 @@ struct LegacyEdge {
 }
 
 struct LegacyEvent {
-    id: i64,
+    id: Option<String>, // NULL in some intermediate schema rows; only used for error reporting
     event_type: String,
     workspace: Option<String>,
     repo: Option<String>,
@@ -238,10 +238,23 @@ struct LegacyEvent {
 }
 
 fn load_legacy_nodes(conn: &Connection) -> rusqlite::Result<Vec<LegacyNode>> {
-    // Check if the new schema (with status column) or old schema
-    let sql = "SELECT id, node_type, title, content, source, repo, created_at, updated_at,
+    let has_metadata = conn
+        .prepare("PRAGMA table_info(knowledge_nodes)")?
+        .query_map([], |row| {
+            let name: String = row.get(1)?;
+            Ok(name)
+        })?
+        .any(|r| r.map(|n| n == "metadata").unwrap_or(false));
+
+    let sql = if has_metadata {
+        "SELECT id, node_type, title, content, source, repo, created_at, updated_at,
                 COALESCE(metadata, '{}') as metadata
-         FROM knowledge_nodes ORDER BY created_at";
+         FROM knowledge_nodes ORDER BY created_at"
+    } else {
+        "SELECT id, node_type, title, content, source, repo, created_at, updated_at,
+                '{}' as metadata
+         FROM knowledge_nodes ORDER BY created_at"
+    };
 
     let mut stmt = conn.prepare(sql)?;
     let nodes = stmt
@@ -265,26 +278,35 @@ fn load_legacy_nodes(conn: &Connection) -> rusqlite::Result<Vec<LegacyNode>> {
 }
 
 fn load_legacy_edges(conn: &Connection) -> rusqlite::Result<Vec<LegacyEdge>> {
-    // Handle both old (from_node/to_node) and new (from_id/to_id) column names
-    let has_from_node = conn
+    let cols: Vec<String> = conn
         .prepare("PRAGMA table_info(knowledge_edges)")?
         .query_map([], |row| {
             let name: String = row.get(1)?;
             Ok(name)
         })?
-        .any(|r| r.map(|n| n == "from_node").unwrap_or(false));
+        .filter_map(|r| r.ok())
+        .collect();
 
-    let (from_col, to_col) = if has_from_node {
+    // Handle both old (from_node/to_node) and new (from_id/to_id) column names
+    let (from_col, to_col) = if cols.iter().any(|n| n == "from_node") {
         ("from_node", "to_node")
     } else {
         ("from_id", "to_id")
     };
 
+    // properties column was removed in the intermediate Rust schema
+    let props_expr = if cols.iter().any(|n| n == "properties") {
+        "COALESCE(properties, '{}')".to_string()
+    } else {
+        "'{}'".to_string()
+    };
+
     let sql = format!(
-        "SELECT {from}, {to}, edge_type, COALESCE(properties, '{{}}'), created_at
+        "SELECT {from}, {to}, edge_type, {props}, created_at
          FROM knowledge_edges ORDER BY created_at",
         from = from_col,
-        to = to_col
+        to = to_col,
+        props = props_expr,
     );
 
     let mut stmt = conn.prepare(&sql)?;
@@ -303,6 +325,158 @@ fn load_legacy_edges(conn: &Connection) -> rusqlite::Result<Vec<LegacyEdge>> {
     Ok(edges)
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::HollyDb;
+    use rusqlite::Connection;
+
+    /// Build a legacy DB with the original TypeScript schema (no metadata column).
+    fn make_legacy_db_without_metadata() -> Connection {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(
+            "CREATE TABLE knowledge_nodes (
+                id        TEXT PRIMARY KEY,
+                node_type TEXT NOT NULL,
+                title     TEXT NOT NULL,
+                content   TEXT NOT NULL DEFAULT '{}',
+                tags      TEXT NOT NULL DEFAULT '[]',
+                repo      TEXT,
+                status    TEXT,
+                source    TEXT NOT NULL DEFAULT 'curated',
+                agent     TEXT,
+                user      TEXT,
+                llm       TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE knowledge_edges (
+                from_id   TEXT NOT NULL,
+                to_id     TEXT NOT NULL,
+                edge_type TEXT NOT NULL,
+                properties TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE holly_events (
+                id         INTEGER PRIMARY KEY,
+                event_type TEXT NOT NULL,
+                workspace  TEXT,
+                repo       TEXT,
+                payload    TEXT,
+                created_at TEXT NOT NULL
+            );",
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO knowledge_nodes (id, node_type, title, content, source, created_at, updated_at)
+             VALUES ('test-id-1', 'decision', 'Test decision', '{\"detail\":\"value\"}',
+                     'curated', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+        conn
+    }
+
+    /// Build a DB with the intermediate Rust schema (has metadata column).
+    fn make_legacy_db_with_metadata() -> Connection {
+        let conn = make_legacy_db_without_metadata();
+        conn.execute_batch("ALTER TABLE knowledge_nodes ADD COLUMN metadata TEXT;")
+            .unwrap();
+        conn.execute(
+            "UPDATE knowledge_nodes SET metadata = '{\"created_by_agent\":\"claude-code\"}' WHERE id = 'test-id-1'",
+            [],
+        )
+        .unwrap();
+        conn
+    }
+
+    #[test]
+    fn test_import_legacy_schema_without_metadata() {
+        // Importing a DB that has no metadata column must not error.
+        let legacy = make_legacy_db_without_metadata();
+        let nodes = load_legacy_nodes(&legacy).expect("load_legacy_nodes should succeed");
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0].id, "test-id-1");
+        assert_eq!(nodes[0].title, "Test decision");
+        // metadata should default to empty object
+        assert_eq!(nodes[0].metadata, serde_json::json!({}));
+    }
+
+    #[test]
+    fn test_import_legacy_schema_with_metadata() {
+        // Importing a DB that has a metadata column should read it.
+        let legacy = make_legacy_db_with_metadata();
+        let nodes = load_legacy_nodes(&legacy).expect("load_legacy_nodes should succeed");
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(
+            nodes[0].metadata.get("created_by_agent").and_then(|v| v.as_str()),
+            Some("claude-code")
+        );
+    }
+
+    /// Write a legacy DB (no metadata column) to a temp file and return the path.
+    fn write_legacy_db_to_tempfile() -> tempfile::NamedTempFile {
+        let tmp = tempfile::NamedTempFile::new().unwrap();
+        let conn = Connection::open(tmp.path()).unwrap();
+        conn.execute_batch(
+            "CREATE TABLE knowledge_nodes (
+                id        TEXT PRIMARY KEY,
+                node_type TEXT NOT NULL,
+                title     TEXT NOT NULL,
+                content   TEXT NOT NULL DEFAULT '{}',
+                tags      TEXT NOT NULL DEFAULT '[]',
+                repo      TEXT,
+                status    TEXT,
+                source    TEXT NOT NULL DEFAULT 'curated',
+                agent     TEXT,
+                user      TEXT,
+                llm       TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE knowledge_edges (
+                from_id   TEXT NOT NULL,
+                to_id     TEXT NOT NULL,
+                edge_type TEXT NOT NULL,
+                properties TEXT,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE holly_events (
+                id         INTEGER PRIMARY KEY,
+                event_type TEXT NOT NULL,
+                workspace  TEXT,
+                repo       TEXT,
+                payload    TEXT,
+                created_at TEXT NOT NULL
+            );",
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO knowledge_nodes (id, node_type, title, content, source, created_at, updated_at)
+             VALUES ('test-id-1', 'decision', 'Test decision', '{\"detail\":\"value\"}',
+                     'curated', '2025-01-01T00:00:00Z', '2025-01-01T00:00:00Z')",
+            [],
+        )
+        .unwrap();
+        tmp
+    }
+
+    #[test]
+    fn test_full_import_from_legacy_db_without_metadata() {
+        // End-to-end: import_from succeeds on a schema without metadata column.
+        let target = HollyDb::open_in_memory().unwrap();
+        let tmp = write_legacy_db_to_tempfile();
+
+        let stats = target.import_from(tmp.path()).expect("import_from should succeed");
+        assert_eq!(stats.nodes_imported, 1);
+        assert_eq!(stats.errors.len(), 0);
+
+        let nodes = target.list_nodes(Default::default()).unwrap();
+        assert_eq!(nodes.len(), 1);
+        assert_eq!(nodes[0].title, "Test decision");
+    }
+}
+
 fn load_legacy_events(conn: &Connection) -> rusqlite::Result<Vec<LegacyEvent>> {
     // Check for repo column
     let has_repo = conn
@@ -313,12 +487,13 @@ fn load_legacy_events(conn: &Connection) -> rusqlite::Result<Vec<LegacyEvent>> {
         })?
         .any(|r| r.map(|n| n == "repo").unwrap_or(false));
 
+    // Cast id to TEXT to handle both INTEGER (original TypeScript schema) and UUID TEXT
     let sql = if has_repo {
-        "SELECT id, event_type, workspace, repo, payload, created_at
-         FROM holly_events ORDER BY id"
+        "SELECT CAST(id AS TEXT), event_type, workspace, repo, payload, created_at
+         FROM holly_events ORDER BY created_at"
     } else {
-        "SELECT id, event_type, workspace, NULL, payload, created_at
-         FROM holly_events ORDER BY id"
+        "SELECT CAST(id AS TEXT), event_type, workspace, NULL, payload, created_at
+         FROM holly_events ORDER BY created_at"
     };
 
     let mut stmt = conn.prepare(sql)?;
