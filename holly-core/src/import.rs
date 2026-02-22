@@ -329,6 +329,42 @@ fn load_legacy_edges(conn: &Connection) -> rusqlite::Result<Vec<LegacyEdge>> {
     Ok(edges)
 }
 
+fn load_legacy_events(conn: &Connection) -> rusqlite::Result<Vec<LegacyEvent>> {
+    // Check for repo column
+    let has_repo = conn
+        .prepare("PRAGMA table_info(holly_events)")?
+        .query_map([], |row| {
+            let name: String = row.get(1)?;
+            Ok(name)
+        })?
+        .any(|r| r.map(|n| n == "repo").unwrap_or(false));
+
+    // Cast id to TEXT to handle both INTEGER (original TypeScript schema) and UUID TEXT
+    let sql = if has_repo {
+        "SELECT CAST(id AS TEXT), event_type, workspace, repo, payload, created_at
+         FROM holly_events ORDER BY created_at"
+    } else {
+        "SELECT CAST(id AS TEXT), event_type, workspace, NULL, payload, created_at
+         FROM holly_events ORDER BY created_at"
+    };
+
+    let mut stmt = conn.prepare(sql)?;
+    let events = stmt
+        .query_map([], |row| {
+            let payload_str: String = row.get(4)?;
+            Ok(LegacyEvent {
+                id: row.get(0)?,
+                event_type: row.get(1)?,
+                workspace: row.get(2)?,
+                repo: row.get(3)?,
+                payload: serde_json::from_str(&payload_str).unwrap_or_default(),
+                created_at: row.get(5)?,
+            })
+        })?
+        .collect::<rusqlite::Result<Vec<_>>>()?;
+    Ok(events)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -484,40 +520,4 @@ mod tests {
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes[0].title, "Test decision");
     }
-}
-
-fn load_legacy_events(conn: &Connection) -> rusqlite::Result<Vec<LegacyEvent>> {
-    // Check for repo column
-    let has_repo = conn
-        .prepare("PRAGMA table_info(holly_events)")?
-        .query_map([], |row| {
-            let name: String = row.get(1)?;
-            Ok(name)
-        })?
-        .any(|r| r.map(|n| n == "repo").unwrap_or(false));
-
-    // Cast id to TEXT to handle both INTEGER (original TypeScript schema) and UUID TEXT
-    let sql = if has_repo {
-        "SELECT CAST(id AS TEXT), event_type, workspace, repo, payload, created_at
-         FROM holly_events ORDER BY created_at"
-    } else {
-        "SELECT CAST(id AS TEXT), event_type, workspace, NULL, payload, created_at
-         FROM holly_events ORDER BY created_at"
-    };
-
-    let mut stmt = conn.prepare(sql)?;
-    let events = stmt
-        .query_map([], |row| {
-            let payload_str: String = row.get(4)?;
-            Ok(LegacyEvent {
-                id: row.get(0)?,
-                event_type: row.get(1)?,
-                workspace: row.get(2)?,
-                repo: row.get(3)?,
-                payload: serde_json::from_str(&payload_str).unwrap_or_default(),
-                created_at: row.get(5)?,
-            })
-        })?
-        .collect::<rusqlite::Result<Vec<_>>>()?;
-    Ok(events)
 }
