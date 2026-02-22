@@ -1,14 +1,14 @@
 use crate::tools::{edges, events, maintenance, nodes, search, tasks};
 use holly_core::HollyDb;
 use rmcp::{
-    Error as McpError, ServerHandler,
     model::{
         CallToolRequestParam, CallToolResult, Content, Implementation, ListToolsResult,
         PaginatedRequestParam, ServerCapabilities, ServerInfo, Tool,
     },
     service::RequestContext,
+    Error as McpError, ServerHandler,
 };
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use std::sync::{Arc, Mutex};
 
 type Db = Arc<Mutex<HollyDb>>;

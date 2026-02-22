@@ -60,7 +60,11 @@ pub fn list(
 
     println!("{} event(s):\n", events.len());
     for e in &events {
-        let ws = e.workspace.as_deref().map(|w| format!(" ws:{}", w)).unwrap_or_default();
+        let ws = e
+            .workspace
+            .as_deref()
+            .map(|w| format!(" ws:{}", w))
+            .unwrap_or_default();
         println!("  {} [{}]{} {}", e.event_type, &e.id[..8], ws, e.created_at);
     }
     Ok(())

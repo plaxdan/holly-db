@@ -1,6 +1,4 @@
 pub mod audit;
-pub mod mcp;
-pub mod reindex;
 pub mod connect;
 pub mod context;
 pub mod delete;
@@ -10,7 +8,9 @@ pub mod get;
 pub mod import;
 pub mod init;
 pub mod list;
+pub mod mcp;
 pub mod record;
+pub mod reindex;
 pub mod remember;
 pub mod run;
 pub mod search;

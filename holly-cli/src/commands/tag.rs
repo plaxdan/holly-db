@@ -1,6 +1,12 @@
 use holly_core::{HollyDb, UpdateNodeInput};
 
-pub fn run(db: &HollyDb, id: &str, tags: Vec<String>, remove: bool, json: bool) -> anyhow::Result<()> {
+pub fn run(
+    db: &HollyDb,
+    id: &str,
+    tags: Vec<String>,
+    remove: bool,
+    json: bool,
+) -> anyhow::Result<()> {
     let existing = db.get_node(id)?;
 
     let new_tags = if remove {

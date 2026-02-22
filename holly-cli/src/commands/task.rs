@@ -1,4 +1,4 @@
-use holly_core::{HollyDb, CreateNodeInput, UpdateNodeInput, ListNodesFilter};
+use holly_core::{CreateNodeInput, HollyDb, ListNodesFilter, UpdateNodeInput};
 
 pub fn create(
     db: &HollyDb,

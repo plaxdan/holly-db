@@ -1,7 +1,7 @@
 mod commands;
 
 use clap::{Parser, Subcommand};
-use holly_core::{HollyDb, ContextFormat};
+use holly_core::{ContextFormat, HollyDb};
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -346,7 +346,11 @@ fn run(cli: Cli) -> anyhow::Result<()> {
     let json = cli.json;
 
     // `init` doesn't need an existing DB
-    if let Commands::Init { global, download_model } = &cli.command {
+    if let Commands::Init {
+        global,
+        download_model,
+    } = &cli.command
+    {
         if *download_model {
             return commands::init::download_model();
         }
@@ -379,29 +383,63 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             commands::remember::run(&db, &text, json)?;
         }
 
-        Commands::Record { r#type, title, content, repo, status, source, tags } => {
+        Commands::Record {
+            r#type,
+            title,
+            content,
+            repo,
+            status,
+            source,
+            tags,
+        } => {
             commands::record::run(
-                &db, &r#type, &title,
-                content.as_deref(), repo.as_deref(),
-                status.as_deref(), source.as_deref(),
-                tags, json,
+                &db,
+                &r#type,
+                &title,
+                content.as_deref(),
+                repo.as_deref(),
+                status.as_deref(),
+                source.as_deref(),
+                tags,
+                json,
             )?;
         }
 
-        Commands::Search { query, r#type, repo, status, semantic, limit } => {
+        Commands::Search {
+            query,
+            r#type,
+            repo,
+            status,
+            semantic,
+            limit,
+        } => {
             commands::search::run(
-                &db, &query,
-                r#type.as_deref(), repo.as_deref(), status.as_deref(),
-                semantic, limit, json,
+                &db,
+                &query,
+                r#type.as_deref(),
+                repo.as_deref(),
+                status.as_deref(),
+                semantic,
+                limit,
+                json,
             )?;
         }
 
-        Commands::List { r#type, repo, status, source, limit } => {
+        Commands::List {
+            r#type,
+            repo,
+            status,
+            source,
+            limit,
+        } => {
             commands::list::run(
                 &db,
-                r#type.as_deref(), repo.as_deref(),
-                status.as_deref(), source.as_deref(),
-                limit, json,
+                r#type.as_deref(),
+                repo.as_deref(),
+                status.as_deref(),
+                source.as_deref(),
+                limit,
+                json,
             )?;
         }
 
@@ -409,12 +447,25 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             commands::get::run(&db, &id, related, json)?;
         }
 
-        Commands::Edit { id, title, content, replace, status, repo, tags } => {
+        Commands::Edit {
+            id,
+            title,
+            content,
+            replace,
+            status,
+            repo,
+            tags,
+        } => {
             commands::edit::run(
-                &db, &id,
-                title.as_deref(), content.as_deref(),
-                replace, status.as_deref(), repo.as_deref(),
-                tags, json,
+                &db,
+                &id,
+                title.as_deref(),
+                content.as_deref(),
+                replace,
+                status.as_deref(),
+                repo.as_deref(),
+                tags,
+                json,
             )?;
         }
 
@@ -444,24 +495,46 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
 
         Commands::Event { action } => match action {
-            EventAction::Record { event_type, payload, repo, workspace, idempotency_key } => {
+            EventAction::Record {
+                event_type,
+                payload,
+                repo,
+                workspace,
+                idempotency_key,
+            } => {
                 commands::event::record(
-                    &db, &event_type,
-                    payload.as_deref(), repo.as_deref(), workspace.as_deref(),
-                    idempotency_key.as_deref(), json,
+                    &db,
+                    &event_type,
+                    payload.as_deref(),
+                    repo.as_deref(),
+                    workspace.as_deref(),
+                    idempotency_key.as_deref(),
+                    json,
                 )?;
             }
-            EventAction::List { r#type, repo, workspace, limit } => {
+            EventAction::List {
+                r#type,
+                repo,
+                workspace,
+                limit,
+            } => {
                 commands::event::list(
                     &db,
-                    r#type.as_deref(), repo.as_deref(), workspace.as_deref(),
-                    limit, json,
+                    r#type.as_deref(),
+                    repo.as_deref(),
+                    workspace.as_deref(),
+                    limit,
+                    json,
                 )?;
             }
         },
 
         Commands::Task { action } => match action {
-            TaskAction::Create { title, repo, priority } => {
+            TaskAction::Create {
+                title,
+                repo,
+                priority,
+            } => {
                 commands::task::create(&db, &title, repo.as_deref(), priority.as_deref(), json)?;
             }
             TaskAction::Start { id } => {
@@ -485,7 +558,11 @@ fn run(cli: Cli) -> anyhow::Result<()> {
             RunAction::Start { task, title } => {
                 commands::run::start(&db, &task, title.as_deref(), json)?;
             }
-            RunAction::Complete { id, status, summary } => {
+            RunAction::Complete {
+                id,
+                status,
+                summary,
+            } => {
                 commands::run::complete(&db, &id, status.as_deref(), summary.as_deref(), json)?;
             }
         },

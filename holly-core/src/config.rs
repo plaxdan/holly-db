@@ -26,8 +26,8 @@ impl HollyConfig {
     /// Load config from a YAML file.
     pub fn from_file(path: &Path) -> Result<Self> {
         let content = std::fs::read_to_string(path)?;
-        let config: HollyConfig = serde_yaml::from_str(&content)
-            .map_err(|e| HollyError::Config(e.to_string()))?;
+        let config: HollyConfig =
+            serde_yaml::from_str(&content).map_err(|e| HollyError::Config(e.to_string()))?;
         config.validate()?;
         Ok(config)
     }

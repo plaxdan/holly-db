@@ -3,7 +3,10 @@ use std::path::Path;
 
 pub fn run(db: &HollyDb, from: &Path, json: bool) -> anyhow::Result<()> {
     if !from.exists() {
-        return Err(anyhow::anyhow!("Legacy database not found: {}", from.display()));
+        return Err(anyhow::anyhow!(
+            "Legacy database not found: {}",
+            from.display()
+        ));
     }
 
     eprintln!("Importing from {}...", from.display());
@@ -15,7 +18,10 @@ pub fn run(db: &HollyDb, from: &Path, json: bool) -> anyhow::Result<()> {
     }
 
     println!("Import complete:");
-    println!("  Nodes:   {} imported, {} skipped", stats.nodes_imported, stats.nodes_skipped);
+    println!(
+        "  Nodes:   {} imported, {} skipped",
+        stats.nodes_imported, stats.nodes_skipped
+    );
     println!("  Edges:   {} imported", stats.edges_imported);
     println!("  Events:  {} imported", stats.events_imported);
 

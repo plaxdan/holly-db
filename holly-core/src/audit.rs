@@ -114,20 +114,23 @@ impl HollyDb {
     }
 
     fn count_nodes(&self) -> Result<usize> {
-        let c: i64 = self.conn.query_row(
-            "SELECT count(*) FROM knowledge_nodes", [], |r| r.get(0))?;
+        let c: i64 = self
+            .conn
+            .query_row("SELECT count(*) FROM knowledge_nodes", [], |r| r.get(0))?;
         Ok(c as usize)
     }
 
     fn count_edges(&self) -> Result<usize> {
-        let c: i64 = self.conn.query_row(
-            "SELECT count(*) FROM knowledge_edges", [], |r| r.get(0))?;
+        let c: i64 = self
+            .conn
+            .query_row("SELECT count(*) FROM knowledge_edges", [], |r| r.get(0))?;
         Ok(c as usize)
     }
 
     fn count_events(&self) -> Result<usize> {
-        let c: i64 = self.conn.query_row(
-            "SELECT count(*) FROM holly_events", [], |r| r.get(0))?;
+        let c: i64 = self
+            .conn
+            .query_row("SELECT count(*) FROM holly_events", [], |r| r.get(0))?;
         Ok(c as usize)
     }
 }

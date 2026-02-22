@@ -82,14 +82,12 @@ impl HollyDb {
         let content = merge_content_with_defaults(&input.node_type, input.content);
 
         // Extract status from content if not provided explicitly
-        let raw_status = input.status.as_deref().or_else(|| {
-            content
-                .get("status")
-                .and_then(|v| v.as_str())
-        });
+        let raw_status = input
+            .status
+            .as_deref()
+            .or_else(|| content.get("status").and_then(|v| v.as_str()));
 
-        let status =
-            apply_status_governance(&input.node_type, raw_status, false)?;
+        let status = apply_status_governance(&input.node_type, raw_status, false)?;
 
         let tags_json = serde_json::to_string(&input.tags)?;
         let content_json = serde_json::to_string(&content)?;
@@ -171,9 +169,7 @@ impl HollyDb {
             existing.content.clone()
         };
 
-        let raw_status = input.status.as_deref().or({
-            existing.status.as_deref()
-        });
+        let raw_status = input.status.as_deref().or({ existing.status.as_deref() });
         let status = apply_status_governance(&existing.node_type, raw_status, false)?;
 
         let tags = input.tags.unwrap_or_else(|| existing.tags.clone());
@@ -219,7 +215,8 @@ impl HollyDb {
     pub fn list_nodes(&self, filter: ListNodesFilter) -> Result<Vec<Node>> {
         let mut sql = "SELECT id, node_type, title, content, tags, repo, status, source,
                               agent, user, llm, created_at, updated_at
-                       FROM knowledge_nodes WHERE 1=1".to_string();
+                       FROM knowledge_nodes WHERE 1=1"
+            .to_string();
         let mut positional: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
         let mut idx = 1usize;
 
@@ -286,11 +283,12 @@ impl HollyDb {
         }
 
         // Count already-indexed nodes
-        let already_indexed: usize = self.conn.query_row(
-            "SELECT count(*) FROM knowledge_vec",
-            [],
-            |row| row.get::<_, i64>(0),
-        ).unwrap_or(0) as usize;
+        let already_indexed: usize = self
+            .conn
+            .query_row("SELECT count(*) FROM knowledge_vec", [], |row| {
+                row.get::<_, i64>(0)
+            })
+            .unwrap_or(0) as usize;
 
         // Fetch nodes missing from knowledge_vec
         let mut stmt = self.conn.prepare(
@@ -318,9 +316,13 @@ impl HollyDb {
             match crate::embeddings::generate_embedding(&text) {
                 Ok(embedding) => match self.vec_upsert(&id, &embedding) {
                     Ok(()) => stats.indexed += 1,
-                    Err(e) => stats.errors.push(format!("{}: upsert failed: {}", &id[..8], e)),
+                    Err(e) => stats
+                        .errors
+                        .push(format!("{}: upsert failed: {}", &id[..8], e)),
                 },
-                Err(e) => stats.errors.push(format!("{}: embed failed: {}", &id[..8], e)),
+                Err(e) => stats
+                    .errors
+                    .push(format!("{}: embed failed: {}", &id[..8], e)),
             }
         }
 
@@ -346,15 +348,33 @@ fn merge_content_with_defaults(node_type: &str, content: Option<Value>) -> Value
 fn default_content(node_type: &str) -> Value {
     match node_type {
         "idea" => serde_json::json!({ "source_channel": "cli", "raw_text": "", "status": "open" }),
-        "goal" => serde_json::json!({ "priority": 5, "complexity": "medium", "status": "planning" }),
-        "decision" => serde_json::json!({ "context": "", "decision": "", "consequences": "", "status": "proposed", "alternatives_considered": [] }),
-        "implementation" => serde_json::json!({ "files": [], "commits": [], "status": "in_progress", "test_coverage": null }),
-        "error" => serde_json::json!({ "stack_trace": "", "frequency": 1, "severity": "medium", "status": "open" }),
-        "improvement" => serde_json::json!({ "rationale": "", "impact": "medium", "effort": "medium", "status": "proposed" }),
-        "constraint" => serde_json::json!({ "applies_to": "", "value": "", "source_file": "", "verified_date": "", "status": "active" }),
-        "task" => serde_json::json!({ "status": "planned", "priority": "medium", "owner": "", "depends_on": [], "evidence": [] }),
-        "run" => serde_json::json!({ "status": "started", "task_id": "", "result": "recorded", "artifacts": [] }),
-        "artifact" => serde_json::json!({ "status": "recorded", "artifact_type": "evidence", "path": "", "task_id": "", "run_id": "" }),
+        "goal" => {
+            serde_json::json!({ "priority": 5, "complexity": "medium", "status": "planning" })
+        }
+        "decision" => {
+            serde_json::json!({ "context": "", "decision": "", "consequences": "", "status": "proposed", "alternatives_considered": [] })
+        }
+        "implementation" => {
+            serde_json::json!({ "files": [], "commits": [], "status": "in_progress", "test_coverage": null })
+        }
+        "error" => {
+            serde_json::json!({ "stack_trace": "", "frequency": 1, "severity": "medium", "status": "open" })
+        }
+        "improvement" => {
+            serde_json::json!({ "rationale": "", "impact": "medium", "effort": "medium", "status": "proposed" })
+        }
+        "constraint" => {
+            serde_json::json!({ "applies_to": "", "value": "", "source_file": "", "verified_date": "", "status": "active" })
+        }
+        "task" => {
+            serde_json::json!({ "status": "planned", "priority": "medium", "owner": "", "depends_on": [], "evidence": [] })
+        }
+        "run" => {
+            serde_json::json!({ "status": "started", "task_id": "", "result": "recorded", "artifacts": [] })
+        }
+        "artifact" => {
+            serde_json::json!({ "status": "recorded", "artifact_type": "evidence", "path": "", "task_id": "", "run_id": "" })
+        }
         _ => serde_json::json!({}),
     }
 }
@@ -381,7 +401,8 @@ fn row_to_node(row: &rusqlite::Row<'_>) -> rusqlite::Result<Node> {
     let content_str: String = row.get(3)?;
     let tags_str: String = row.get(4)?;
 
-    let content: Value = serde_json::from_str(&content_str).unwrap_or(Value::Object(Default::default()));
+    let content: Value =
+        serde_json::from_str(&content_str).unwrap_or(Value::Object(Default::default()));
     let tags: Vec<String> = serde_json::from_str(&tags_str).unwrap_or_default();
 
     Ok(Node {

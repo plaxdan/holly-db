@@ -4,21 +4,97 @@ use serde_json::{Map, Value};
 pub fn parse_content(node_type: &str, text: &str) -> Value {
     match node_type {
         "decision" => parse_decision(text),
-        "goal" => parse_labeled(text, &["priority", "complexity", "status"], &[], "description"),
-        "error" => parse_labeled(text, &["stack_trace", "severity", "status", "frequency"], &[], "stack_trace"),
-        "improvement" => parse_labeled(text, &["rationale", "impact", "effort", "status"], &[], "rationale"),
+        "goal" => parse_labeled(
+            text,
+            &["priority", "complexity", "status"],
+            &[],
+            "description",
+        ),
+        "error" => parse_labeled(
+            text,
+            &["stack_trace", "severity", "status", "frequency"],
+            &[],
+            "stack_trace",
+        ),
+        "improvement" => parse_labeled(
+            text,
+            &["rationale", "impact", "effort", "status"],
+            &[],
+            "rationale",
+        ),
         "idea" => parse_idea(text),
-        "requirement" => parse_labeled(text, &["acceptance_criteria", "estimated_complexity"], &["acceptance_criteria"], "description"),
-        "implementation" => parse_labeled(text, &["files", "commits", "status", "test_coverage"], &["files", "commits"], "description"),
-        "constraint" => parse_labeled(text, &["applies_to", "value", "source_file", "verified_date", "status"], &[], "description"),
-        "task" => parse_labeled(text, &["status", "priority", "owner", "depends_on", "evidence"], &["depends_on", "evidence"], "description"),
-        "run" => parse_labeled(text, &["status", "task_id", "result", "artifacts"], &["artifacts"], "description"),
-        "artifact" => parse_labeled(text, &["status", "artifact_type", "path", "task_id", "run_id"], &[], "description"),
-        "defect" => parse_labeled(text, &["origin_task_id", "origin_pr", "found_by", "severity", "category", "status"], &[], "description"),
-        "override" => parse_labeled(text, &["gate", "reason", "authority", "scope", "outcome", "status"], &[], "description"),
+        "requirement" => parse_labeled(
+            text,
+            &["acceptance_criteria", "estimated_complexity"],
+            &["acceptance_criteria"],
+            "description",
+        ),
+        "implementation" => parse_labeled(
+            text,
+            &["files", "commits", "status", "test_coverage"],
+            &["files", "commits"],
+            "description",
+        ),
+        "constraint" => parse_labeled(
+            text,
+            &[
+                "applies_to",
+                "value",
+                "source_file",
+                "verified_date",
+                "status",
+            ],
+            &[],
+            "description",
+        ),
+        "task" => parse_labeled(
+            text,
+            &["status", "priority", "owner", "depends_on", "evidence"],
+            &["depends_on", "evidence"],
+            "description",
+        ),
+        "run" => parse_labeled(
+            text,
+            &["status", "task_id", "result", "artifacts"],
+            &["artifacts"],
+            "description",
+        ),
+        "artifact" => parse_labeled(
+            text,
+            &["status", "artifact_type", "path", "task_id", "run_id"],
+            &[],
+            "description",
+        ),
+        "defect" => parse_labeled(
+            text,
+            &[
+                "origin_task_id",
+                "origin_pr",
+                "found_by",
+                "severity",
+                "category",
+                "status",
+            ],
+            &[],
+            "description",
+        ),
+        "override" => parse_labeled(
+            text,
+            &["gate", "reason", "authority", "scope", "outcome", "status"],
+            &[],
+            "description",
+        ),
         "policy" => parse_labeled(
             text,
-            &["scope", "enforcement_level", "pass_conditions", "fail_conditions", "recovery_path", "version", "status"],
+            &[
+                "scope",
+                "enforcement_level",
+                "pass_conditions",
+                "fail_conditions",
+                "recovery_path",
+                "version",
+                "status",
+            ],
             &["pass_conditions", "fail_conditions"],
             "description",
         ),
@@ -46,7 +122,12 @@ pub fn extract_status(text: &str) -> Option<String> {
     None
 }
 
-fn parse_labeled(text: &str, fields: &[&str], array_fields: &[&str], fallback_field: &str) -> Value {
+fn parse_labeled(
+    text: &str,
+    fields: &[&str],
+    array_fields: &[&str],
+    fallback_field: &str,
+) -> Value {
     let mut obj = Map::new();
 
     for field in fields {
@@ -94,8 +175,20 @@ fn parse_decision(text: &str) -> Value {
     let mut obj = Map::new();
 
     // Try section-based parsing first
-    let section_names = ["Context", "Decision", "Consequences", "Alternatives", "Status"];
-    let field_keys = ["context", "decision", "consequences", "alternatives_considered", "status"];
+    let section_names = [
+        "Context",
+        "Decision",
+        "Consequences",
+        "Alternatives",
+        "Status",
+    ];
+    let field_keys = [
+        "context",
+        "decision",
+        "consequences",
+        "alternatives_considered",
+        "status",
+    ];
 
     // Split on section headers
     let mut sections: Vec<(String, String)> = Vec::new();
@@ -122,10 +215,9 @@ fn parse_decision(text: &str) -> Value {
                 break;
             }
         }
-        if !found_section
-            && current_section.is_some() {
-                current_content.push(line.to_string());
-            }
+        if !found_section && current_section.is_some() {
+            current_content.push(line.to_string());
+        }
     }
     if let Some(sec) = current_section {
         sections.push((sec, current_content.join("\n").trim().to_string()));
@@ -151,10 +243,15 @@ fn parse_decision(text: &str) -> Value {
         }
     } else {
         // Fall back to line-by-line parsing
-        obj = parse_labeled(text, &["context", "decision", "consequences", "status"], &["alternatives_considered"], "context")
-            .as_object()
-            .cloned()
-            .unwrap_or_default();
+        obj = parse_labeled(
+            text,
+            &["context", "decision", "consequences", "status"],
+            &["alternatives_considered"],
+            "context",
+        )
+        .as_object()
+        .cloned()
+        .unwrap_or_default();
     }
 
     Value::Object(obj)
@@ -175,7 +272,10 @@ fn parse_idea(text: &str) -> Value {
     }
 
     // Always set source_channel for ideas
-    obj.insert("source_channel".to_string(), Value::String("claude_code".to_string()));
+    obj.insert(
+        "source_channel".to_string(),
+        Value::String("claude_code".to_string()),
+    );
 
     // If no status found, store as raw_text
     if !obj.contains_key("status") {
@@ -206,7 +306,10 @@ mod tests {
         let text = "Context: We needed to choose a storage engine\nDecision: Use SQLite\nConsequences: Simple setup\nStatus: accepted";
         let val = parse_content("decision", text);
         let obj = val.as_object().unwrap();
-        assert_eq!(obj["context"].as_str().unwrap(), "We needed to choose a storage engine");
+        assert_eq!(
+            obj["context"].as_str().unwrap(),
+            "We needed to choose a storage engine"
+        );
         assert_eq!(obj["decision"].as_str().unwrap(), "Use SQLite");
         assert_eq!(obj["status"].as_str().unwrap(), "accepted");
     }

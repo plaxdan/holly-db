@@ -1,4 +1,4 @@
-use holly_core::{HollyDb, CreateNodeInput, UpdateNodeInput};
+use holly_core::{CreateNodeInput, HollyDb, UpdateNodeInput};
 
 pub fn start(db: &HollyDb, task_id: &str, title: Option<&str>, json: bool) -> anyhow::Result<()> {
     // Verify task exists

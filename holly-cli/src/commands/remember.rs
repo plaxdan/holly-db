@@ -1,4 +1,4 @@
-use holly_core::{HollyDb, CreateNodeInput};
+use holly_core::{CreateNodeInput, HollyDb};
 
 pub fn run(db: &HollyDb, text: &str, json: bool) -> anyhow::Result<()> {
     let node = db.create_node(CreateNodeInput {

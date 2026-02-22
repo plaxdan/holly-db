@@ -1,4 +1,4 @@
-use holly_core::{HollyDb, embeddings};
+use holly_core::{embeddings, HollyDb};
 use std::path::Path;
 
 pub fn run(global: bool, db_path: Option<&Path>) -> anyhow::Result<()> {

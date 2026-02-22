@@ -1,8 +1,10 @@
 use crate::content_parser::{extract_status, parse_content};
-use crate::formatting::{format_node_detail, format_node_list, format_node_summary, format_recent_table};
+use crate::formatting::{
+    format_node_detail, format_node_list, format_node_summary, format_recent_table,
+};
 use holly_core::{
-    CreateNodeInput, HollyDb, ListNodesFilter, Node, Provenance, UpdateNodeInput,
-    embeddings, embedding_text,
+    embedding_text, embeddings, CreateNodeInput, HollyDb, ListNodesFilter, Node, Provenance,
+    UpdateNodeInput,
 };
 use rmcp::model::{CallToolResult, Content};
 use serde_json::{Map, Value};
@@ -19,7 +21,9 @@ fn err(text: impl Into<String>) -> CallToolResult {
 }
 
 fn get_str(args: &Map<String, Value>, key: &str) -> Option<String> {
-    args.get(key).and_then(|v| v.as_str()).map(|s| s.to_string())
+    args.get(key)
+        .and_then(|v| v.as_str())
+        .map(|s| s.to_string())
 }
 
 fn get_str_req(args: &Map<String, Value>, key: &str) -> Result<String, String> {
@@ -84,7 +88,10 @@ pub async fn holly_record(db: Db, args: Map<String, Value>) -> CallToolResult {
                         let _ = db.vec_upsert(&n.id, &emb);
                     }
                 }
-                ok(format!("Recorded [{}] \"{}\" ({})", n.node_type, n.title, n.id))
+                ok(format!(
+                    "Recorded [{}] \"{}\" ({})",
+                    n.node_type, n.title, n.id
+                ))
             }
             Err(e) => err(format!("Error: {}", e)),
         }
@@ -204,7 +211,10 @@ pub async fn holly_update(db: Db, args: Map<String, Value>) -> CallToolResult {
         };
 
         match db.update_node(&id, input) {
-            Ok(n) => ok(format!("Updated [{}] \"{}\" ({})", n.node_type, n.title, n.id)),
+            Ok(n) => ok(format!(
+                "Updated [{}] \"{}\" ({})",
+                n.node_type, n.title, n.id
+            )),
             Err(e) => err(format!("Error: {}", e)),
         }
     })
@@ -248,7 +258,11 @@ pub async fn holly_related(db: Db, args: Map<String, Value>) -> CallToolResult {
                 } else {
                     let nodes: Vec<&Node> = results.iter().map(|r| &r.node).collect();
                     let lines: Vec<String> = nodes.iter().map(|n| format_node_summary(n)).collect();
-                    ok(format!("Found {} similar node(s):\n\n{}", lines.len(), lines.join("\n")))
+                    ok(format!(
+                        "Found {} similar node(s):\n\n{}",
+                        lines.len(),
+                        lines.join("\n")
+                    ))
                 }
             }
             Err(e) => err(format!("Error: {}", e)),

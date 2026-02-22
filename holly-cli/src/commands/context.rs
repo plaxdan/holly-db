@@ -1,4 +1,4 @@
-use holly_core::{HollyDb, ContextFormat};
+use holly_core::{ContextFormat, HollyDb};
 use std::path::Path;
 
 pub fn run(

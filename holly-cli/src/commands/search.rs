@@ -1,4 +1,4 @@
-use holly_core::{HollyDb, SearchOptions, embeddings};
+use holly_core::{embeddings, HollyDb, SearchOptions};
 
 #[allow(clippy::too_many_arguments)]
 pub fn run(
