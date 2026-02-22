@@ -220,6 +220,12 @@ enum Commands {
     /// Run the MCP server (stdio transport)
     #[command(name = "mcp-server")]
     McpServer,
+
+    /// Manage MCP configuration
+    Mcp {
+        #[command(subcommand)]
+        action: McpAction,
+    },
 }
 
 #[derive(Subcommand)]
@@ -285,6 +291,16 @@ enum TaskAction {
 }
 
 #[derive(Subcommand)]
+enum McpAction {
+    /// Add holly-db to .mcp.json in the current directory
+    Enable,
+    /// Remove holly-db from .mcp.json
+    Disable,
+    /// Show MCP configuration status
+    Status,
+}
+
+#[derive(Subcommand)]
 enum RunAction {
     /// Start a run linked to a task
     Start {
@@ -328,6 +344,16 @@ fn run(cli: Cli) -> anyhow::Result<()> {
     // `mcp-server` opens its own DB inside the async runtime
     if let Commands::McpServer = &cli.command {
         return commands::mcp::run_server();
+    }
+
+    // `mcp enable/disable/status` — resolves DB path but doesn't open it
+    if let Commands::Mcp { action } = &cli.command {
+        let db_path = HollyDb::resolve_path(cli.db.as_deref());
+        return match action {
+            McpAction::Enable => commands::mcp::enable(&db_path),
+            McpAction::Disable => commands::mcp::disable(),
+            McpAction::Status => commands::mcp::status(),
+        };
     }
 
     // All other commands require an open DB
@@ -461,6 +487,7 @@ fn run(cli: Cli) -> anyhow::Result<()> {
         }
 
         Commands::McpServer => unreachable!("handled above"),
+        Commands::Mcp { .. } => unreachable!("handled above"),
     }
 
     Ok(())
