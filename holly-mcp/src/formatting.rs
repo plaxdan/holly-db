@@ -277,7 +277,7 @@ pub fn format_audit(report: &AuditReport, mode: &str) -> String {
     lines.push(format!("Orphaned edges: {}", report.orphaned_edges));
     lines.push(format!("Missing embeddings: {}", report.missing_embeddings));
     lines.push(format!("Empty content: {}", report.empty_content_count));
-    lines.push(format!("Similarity/duplicate detection: not yet implemented"));
+    lines.push("Similarity/duplicate detection: not yet implemented".to_string());
 
     if mode == "detail" && !report.stale_nodes.is_empty() {
         lines.push("\nStale nodes:".to_string());

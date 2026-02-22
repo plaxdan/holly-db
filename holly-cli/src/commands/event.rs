@@ -11,7 +11,7 @@ pub fn record(
     json: bool,
 ) -> anyhow::Result<()> {
     let payload_value: Value = payload
-        .map(|p| serde_json::from_str(p))
+        .map(serde_json::from_str)
         .transpose()
         .map_err(|e| anyhow::anyhow!("Invalid JSON payload: {}", e))?
         .unwrap_or(serde_json::json!({}));

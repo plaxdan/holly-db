@@ -1,6 +1,7 @@
 use holly_core::{HollyDb, UpdateNodeInput};
 use serde_json::Value;
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     db: &HollyDb,
     id: &str,
@@ -13,7 +14,7 @@ pub fn run(
     json: bool,
 ) -> anyhow::Result<()> {
     let content_value: Option<Value> = content
-        .map(|c| serde_json::from_str(c))
+        .map(serde_json::from_str)
         .transpose()
         .map_err(|e| anyhow::anyhow!("Invalid JSON content: {}", e))?;
 

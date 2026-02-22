@@ -135,7 +135,7 @@ types:
     #[test]
     fn test_empty_config() {
         let mut f = NamedTempFile::new().unwrap();
-        writeln!(f, "").unwrap();
+        writeln!(f).unwrap();
         let config = HollyConfig::from_file(f.path()).unwrap();
         assert!(config.types.is_empty());
     }

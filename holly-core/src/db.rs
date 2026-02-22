@@ -31,6 +31,7 @@ impl HollyDb {
         // Register sqlite-vec for future connections AND initialize on this one.
         // sqlite3_auto_extension only fires on connections opened after registration,
         // so we call the init function directly on the already-open connection too.
+        #[allow(clippy::missing_transmute_annotations)]
         unsafe {
             rusqlite::ffi::sqlite3_auto_extension(Some(std::mem::transmute(
                 sqlite_vec::sqlite3_vec_init as *const (),

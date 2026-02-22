@@ -243,7 +243,7 @@ pub fn normalize_status(node_type: &str, raw: &str) -> Option<String> {
     }
 
     // Try with spaces → underscores
-    let underscored = lower.replace(' ', "_").replace('-', "_");
+    let underscored = lower.replace([' ', '-'], "_");
     if allowed.contains(&underscored.as_str()) {
         return Some(underscored);
     }

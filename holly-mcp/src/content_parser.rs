@@ -62,7 +62,7 @@ fn parse_labeled(text: &str, fields: &[&str], array_fields: &[&str], fallback_fi
                             let parts: Vec<Value> = value_str
                                 .split(',')
                                 .map(|s| Value::String(s.trim().to_string()))
-                                .filter(|v| v.as_str().map_or(false, |s| !s.is_empty()))
+                                .filter(|v| v.as_str().is_some_and(|s| !s.is_empty()))
                                 .collect();
                             obj.insert(field.to_string(), Value::Array(parts));
                         } else {
@@ -122,11 +122,10 @@ fn parse_decision(text: &str) -> Value {
                 break;
             }
         }
-        if !found_section {
-            if current_section.is_some() {
+        if !found_section
+            && current_section.is_some() {
                 current_content.push(line.to_string());
             }
-        }
     }
     if let Some(sec) = current_section {
         sections.push((sec, current_content.join("\n").trim().to_string()));
@@ -138,7 +137,7 @@ fn parse_decision(text: &str) -> Value {
                 let parts: Vec<Value> = content
                     .split(',')
                     .map(|s| Value::String(s.trim().to_string()))
-                    .filter(|v| v.as_str().map_or(false, |s| !s.is_empty()))
+                    .filter(|v| v.as_str().is_some_and(|s| !s.is_empty()))
                     .collect();
                 obj.insert("alternatives_considered".to_string(), Value::Array(parts));
             } else {

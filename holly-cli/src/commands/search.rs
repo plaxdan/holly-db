@@ -1,5 +1,6 @@
 use holly_core::{HollyDb, SearchOptions, embeddings};
 
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     db: &HollyDb,
     query: &str,

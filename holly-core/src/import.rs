@@ -222,22 +222,9 @@ struct LegacyEvent {
 
 fn load_legacy_nodes(conn: &Connection) -> rusqlite::Result<Vec<LegacyNode>> {
     // Check if the new schema (with status column) or old schema
-    let has_status_col = conn.prepare("PRAGMA table_info(knowledge_nodes)")?
-        .query_map([], |row| {
-            let name: String = row.get(1)?;
-            Ok(name)
-        })?
-        .any(|r| r.map(|n| n == "status").unwrap_or(false));
-
-    let sql = if has_status_col {
-        "SELECT id, node_type, title, content, source, repo, created_at, updated_at,
+    let sql = "SELECT id, node_type, title, content, source, repo, created_at, updated_at,
                 COALESCE(metadata, '{}') as metadata
-         FROM knowledge_nodes ORDER BY created_at"
-    } else {
-        "SELECT id, node_type, title, content, source, repo, created_at, updated_at,
-                COALESCE(metadata, '{}') as metadata
-         FROM knowledge_nodes ORDER BY created_at"
-    };
+         FROM knowledge_nodes ORDER BY created_at";
 
     let mut stmt = conn.prepare(sql)?;
     let nodes = stmt
