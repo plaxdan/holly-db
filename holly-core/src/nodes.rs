@@ -169,7 +169,7 @@ impl HollyDb {
             existing.content.clone()
         };
 
-        let raw_status = input.status.as_deref().or({ existing.status.as_deref() });
+        let raw_status = input.status.as_deref().or(existing.status.as_deref());
         let status = apply_status_governance(&existing.node_type, raw_status, false)?;
 
         let tags = input.tags.unwrap_or_else(|| existing.tags.clone());
