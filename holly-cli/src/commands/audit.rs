@@ -1,22 +1,36 @@
-use holly_core::HollyDb;
+use holly_core::{embeddings, HollyDb};
 
 pub fn run(db: &HollyDb, fix: bool, stale_days: u32, json: bool) -> anyhow::Result<()> {
-    let report = db.audit(stale_days)?;
-
     if fix {
+        // Apply fixes first so the report reflects the post-fix state.
+
+        // 1. Orphaned edges — always safe to remove
         let removed = db.delete_orphaned_edges()?;
         if removed > 0 {
             eprintln!("Fixed: removed {} orphaned edge(s)", removed);
         }
+
+        // 2. Missing embeddings — backfill if model is available
+        let model_dir = embeddings::default_model_dir();
+        if embeddings::model_available(&model_dir) {
+            let stats = db.reindex()?;
+            if stats.indexed > 0 {
+                eprintln!("Fixed: backfilled {} missing embedding(s)", stats.indexed);
+            }
+        } else if !json {
+            eprintln!("Note: skipping embedding backfill — model not found (run `holly init --download-model`)");
+        }
     }
+
+    let report = db.audit(stale_days)?;
 
     if json {
         println!("{}", serde_json::to_string_pretty(&report)?);
         return Ok(());
     }
 
-    println!("Holly Audit Report");
-    println!("==================");
+    println!("Audit Report");
+    println!("============");
     println!("Nodes:              {}", report.total_nodes);
     println!("Edges:              {}", report.total_edges);
     println!("Events:             {}", report.total_events);
@@ -37,5 +51,11 @@ pub fn run(db: &HollyDb, fix: bool, stale_days: u32, json: bool) -> anyhow::Resu
             );
         }
     }
+
+    let fixable = report.orphaned_edges + report.missing_embeddings;
+    if !fix && fixable > 0 {
+        println!("\n{} issue(s) can be auto-fixed. Run `holly audit --fix` to apply.", fixable);
+    }
+
     Ok(())
 }
