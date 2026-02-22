@@ -1114,6 +1114,7 @@ dependencies = [
  "holly-mcp",
  "serde_json",
  "tokio",
+ "ureq",
 ]
 
 [[package]]
